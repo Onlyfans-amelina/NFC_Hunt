@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Jeu NFC avec Firebase Firestore</title>
+  <!-- Import de Tailwind CSS depuis CDN -->
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100">
+  <div class="container mx-auto p-4">
+    <h1 class="text-3xl font-bold text-center mb-4">Jeu NFC</h1>
+    <p class="text-center mb-4" id="status">Veuillez scanner un site NFC.</p>
+    <div class="flex justify-center space-x-4">
+      <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" id="site1">Scanner Site 1</button>
+      <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" id="site2">Scanner Site 2</button>
+      <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" id="site3">Scanner Site 3</button>
+    </div>
+    <div class="mt-6 text-center">
+      <img id="photoDisplay" class="mx-auto" src="" alt="Photo reçue" style="max-width: 300px; display:none;">
+    </div>
+  </div>
+
+  <!-- Script principal en mode module -->
+  <script type="module">
+    // Import des modules Firebase
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-app.js";
+    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-auth.js";
+    import { getFirestore, doc, getDoc, setDoc, updateDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-firestore.js";
+
+    // ================================================
+    // 1. Configuration Firebase (remplacez les valeurs)
+    // ================================================
+    const firebaseConfig = {
+        apiKey: "AIzaSyCLQMSzHNiOfXD-umi194rayB3-T0_0ekQ",
+  authDomain: "amelina-a6063.firebaseapp.com",
+  databaseURL: "https://amelina-a6063-default-rtdb.firebaseio.com",
+  projectId: "amelina-a6063",
+  storageBucket: "amelina-a6063.firebasestorage.app",
+  messagingSenderId: "221285415211",
+  appId: "1:221285415211:web:1db56bcfe7e3305de02d6e"
+    };
+
+    // Initialisation de Firebase
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // ================================================
+    // 2. Authentification anonyme et gestion des cookies
+    // ================================================
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        try {
+          const result = await signInAnonymously(auth);
+          console.log("Authentification anonyme réussie :", result.user.uid);
+          setCookie("userId", result.user.uid, 7); // valable 7 jours
+        } catch (error) {
+          console.error("Erreur d'authentification anonyme :", error);
+        }
+      } else {
+        console.log("Utilisateur déjà authentifié :", user.uid);
+        setCookie("userId", user.uid, 7);
+      }
+    });
+
+    // Fonctions utilitaires pour les cookies
+    function setCookie(name, value, days) {
+      const d = new Date();
+      d.setTime(d.getTime() + (days * 24 * 60 * 60 * 1000));
+      const expires = "expires=" + d.toUTCString();
+      document.cookie = name + "=" + value + ";" + expires + ";path=/";
+    }
+    function getCookie(name) {
+      const value = `; ${document.cookie}`;
+      const parts = value.split(`; ${name}=`);
+      if (parts.length === 2) return parts.pop().split(';').shift();
+    }
+
+    // ================================================
+    // 3. Gestion de la logique du scan NFC
+    // ================================================
+    const statusElem = document.getElementById("status");
+    const photoDisplay = document.getElementById("photoDisplay");
+    const siteButtons = {
+      site1: document.getElementById("site1"),
+      site2: document.getElementById("site2"),
+      site3: document.getElementById("site3")
+    };
+
+    // Fonction de gestion d'un scan pour un site donné
+    async function handleScan(siteId) {
+      // Récupérer l'utilisateur courant
+      const user = auth.currentUser;
+      if (!user) {
+        alert("Utilisateur non authentifié.");
+        return;
+      }
+      const userId = user.uid;
+      const userDocRef = doc(db, "users", userId);
+      const userDocSnap = await getDoc(userDocRef);
+
+      let visits = 0;
+      let scannedSites = [];
+      let imagesSeen = [];
+
+      if (!userDocSnap.exists()) {
+        // Nouvel utilisateur : création du document avec le 1er scan
+        visits = 1;
+        scannedSites = [siteId];
+        imagesSeen = ["photo1"];
+        await setDoc(userDocRef, { visits, scannedSites, imagesSeen });
+      } else {
+        // Utilisateur existant
+        const userData = userDocSnap.data();
+        visits = userData.visits || 0;
+        scannedSites = userData.scannedSites || [];
+        imagesSeen = userData.imagesSeen || [];
+
+        // Vérifier si le site a déjà été scanné
+        if (scannedSites.includes(siteId)) {
+          statusElem.textContent = "Vous avez déjà scanné ce site. Essayez un autre site.";
+          return;
+        }
+        // Si l'utilisateur a déjà scanné les 3 sites, on ne fait rien
+        if (scannedSites.length >= 3) {
+          statusElem.textContent = "Vous avez déjà scanné tous les sites.";
+          return;
+        }
+        // Mise à jour du document utilisateur
+        visits += 1;
+        scannedSites.push(siteId);
+        // La photo attribuée correspond au nombre de sites scannés (1, 2 ou 3)
+        const photoNumber = scannedSites.length;
+        imagesSeen.push("photo" + photoNumber);
+        await updateDoc(userDocRef, {
+          visits: visits,
+          scannedSites: scannedSites,
+          imagesSeen: imagesSeen
+        });
+      }
+
+      // Mise à jour de la collection "sites"
+      const siteDocRef = doc(db, "sites", siteId);
+      try {
+        // Si le document existe, on ajoute l'UID dans le tableau "scans"
+        await updateDoc(siteDocRef, { scans: arrayUnion(userId) });
+      } catch (error) {
+        // Sinon, on le crée avec le premier scan
+        await setDoc(siteDocRef, { scans: [userId] });
+      }
+
+      // Récupération de la photo correspondant au scan
+      const photoNumber = scannedSites.length; // 1, 2 ou 3
+      const photoDocRef = doc(db, "photos", "photo" + photoNumber);
+      const photoDocSnap = await getDoc(photoDocRef);
+      if (photoDocSnap.exists()) {
+        const photoData = photoDocSnap.data();
+        const photoUrl = photoData.url;
+        // Affichage de l'image sur la page
+        photoDisplay.src = photoUrl;
+        photoDisplay.style.display = "block";
+        statusElem.textContent = "Vous avez reçu l'image #" + photoNumber;
+      } else {
+        statusElem.textContent = "Image non trouvée pour la photo #" + photoNumber;
+      }
+    }
+
+    // ================================================
+    // 4. Gestion des événements sur les boutons de scan
+    // ================================================
+    siteButtons.site1.addEventListener("click", () => handleScan("site1"));
+    siteButtons.site2.addEventListener("click", () => handleScan("site2"));
+    siteButtons.site3.addEventListener("click", () => handleScan("site3"));
+  </script>
+</body>
+</html>
