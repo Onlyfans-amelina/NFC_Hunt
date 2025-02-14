@@ -1,89 +1,177 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Welcome to Firebase Hosting</title>
-
-    <!-- update the version number as needed -->
-    <script defer src="/__/firebase/11.3.1/firebase-app-compat.js"></script>
-    <!-- include only the Firebase features as you need -->
-    <script defer src="/__/firebase/11.3.1/firebase-auth-compat.js"></script>
-    <script defer src="/__/firebase/11.3.1/firebase-database-compat.js"></script>
-    <script defer src="/__/firebase/11.3.1/firebase-firestore-compat.js"></script>
-    <script defer src="/__/firebase/11.3.1/firebase-functions-compat.js"></script>
-    <script defer src="/__/firebase/11.3.1/firebase-messaging-compat.js"></script>
-    <script defer src="/__/firebase/11.3.1/firebase-storage-compat.js"></script>
-    <script defer src="/__/firebase/11.3.1/firebase-analytics-compat.js"></script>
-    <script defer src="/__/firebase/11.3.1/firebase-remote-config-compat.js"></script>
-    <script defer src="/__/firebase/11.3.1/firebase-performance-compat.js"></script>
-    <!-- 
-      initialize the SDK after all desired features are loaded, set useEmulator to false
-      to avoid connecting the SDK to running emulators.
-    -->
-    <script defer src="/__/firebase/init.js?useEmulator=true"></script>
-
-    <style media="screen">
-      body { background: #ECEFF1; color: rgba(0,0,0,0.87); font-family: Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; }
-      #message { background: white; max-width: 360px; margin: 100px auto 16px; padding: 32px 24px; border-radius: 3px; }
-      #message h2 { color: #ffa100; font-weight: bold; font-size: 16px; margin: 0 0 8px; }
-      #message h1 { font-size: 22px; font-weight: 300; color: rgba(0,0,0,0.6); margin: 0 0 16px;}
-      #message p { line-height: 140%; margin: 16px 0 24px; font-size: 14px; }
-      #message a { display: block; text-align: center; background: #039be5; text-transform: uppercase; text-decoration: none; color: white; padding: 16px; border-radius: 4px; }
-      #message, #message a { box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24); }
-      #load { color: rgba(0,0,0,0.4); text-align: center; font-size: 13px; }
-      @media (max-width: 600px) {
-        body, #message { margin-top: 0; background: white; box-shadow: none; }
-        body { border-top: 16px solid #ffa100; }
-      }
-    </style>
-  </head>
-  <body>
-    <div id="message">
-      <h2>Welcome</h2>
-      <h1>Firebase Hosting Setup Complete</h1>
-      <p>You're seeing this because you've successfully setup Firebase Hosting. Now it's time to go build something extraordinary!</p>
-      <a target="_blank" href="https://firebase.google.com/docs/hosting/">Open Hosting Documentation</a>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Jeu NFC avec Firebase Firestore</title>
+  <!-- Import de Tailwind CSS depuis CDN -->
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100">
+  <div class="container mx-auto p-4">
+    <h1 class="text-3xl font-bold text-center mb-4">Jeu NFC</h1>
+    <p class="text-center mb-4" id="status">Veuillez scanner un site NFC.</p>
+    <div class="flex justify-center space-x-4">
+      <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" id="site1">Scanner Site 1</button>
+      <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" id="site2">Scanner Site 2</button>
+      <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" id="site3">Scanner Site 3</button>
     </div>
-    <p id="load">Firebase SDK Loading&hellip;</p>
+    <div class="mt-6 text-center">
+      <img id="photoDisplay" class="mx-auto" src="" alt="Photo reçue" style="max-width: 300px; display:none;">
+    </div>
+  </div>
 
-    <script>
-      document.addEventListener('DOMContentLoaded', function() {
-        const loadEl = document.querySelector('#load');
-        // // 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
-        // // The Firebase SDK is initialized and available here!
-        //
-        // firebase.auth().onAuthStateChanged(user => { });
-        // firebase.database().ref('/path/to/ref').on('value', snapshot => { });
-        // firebase.firestore().doc('/foo/bar').get().then(() => { });
-        // firebase.functions().httpsCallable('yourFunction')().then(() => { });
-        // firebase.messaging().requestPermission().then(() => { });
-        // firebase.storage().ref('/path/to/ref').getDownloadURL().then(() => { });
-        // firebase.analytics(); // call to activate
-        // firebase.analytics().logEvent('tutorial_completed');
-        // firebase.performance(); // call to activate
-        //
-        // // 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
+  <!-- Script principal en mode module -->
+  <script type="module">
+    // Import des modules Firebase
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-app.js";
+    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-auth.js";
+    import { getFirestore, doc, getDoc, setDoc, updateDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-firestore.js";
 
+    // ================================================
+    // 1. Configuration Firebase (remplacez les valeurs)
+    // ================================================
+    const firebaseConfig = {
+        apiKey: "AIzaSyCLQMSzHNiOfXD-umi194rayB3-T0_0ekQ",
+  authDomain: "amelina-a6063.firebaseapp.com",
+  databaseURL: "https://amelina-a6063-default-rtdb.firebaseio.com",
+  projectId: "amelina-a6063",
+  storageBucket: "amelina-a6063.firebasestorage.app",
+  messagingSenderId: "221285415211",
+  appId: "1:221285415211:web:1db56bcfe7e3305de02d6e"
+    };
+
+    // Initialisation de Firebase
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // ================================================
+    // 2. Authentification anonyme et gestion des cookies
+    // ================================================
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
         try {
-          let app = firebase.app();
-          let features = [
-            'auth', 
-            'database', 
-            'firestore',
-            'functions',
-            'messaging', 
-            'storage', 
-            'analytics', 
-            'remoteConfig',
-            'performance',
-          ].filter(feature => typeof app[feature] === 'function');
-          loadEl.textContent = `Firebase SDK loaded with ${features.join(', ')}`;
-        } catch (e) {
-          console.error(e);
-          loadEl.textContent = 'Error loading the Firebase SDK, check the console.';
+          const result = await signInAnonymously(auth);
+          console.log("Authentification anonyme réussie :", result.user.uid);
+          setCookie("userId", result.user.uid, 7); // valable 7 jours
+        } catch (error) {
+          console.error("Erreur d'authentification anonyme :", error);
         }
-      });
-    </script>
-  </body>
+      } else {
+        console.log("Utilisateur déjà authentifié :", user.uid);
+        setCookie("userId", user.uid, 7);
+      }
+    });
+
+    // Fonctions utilitaires pour les cookies
+    function setCookie(name, value, days) {
+      const d = new Date();
+      d.setTime(d.getTime() + (days * 24 * 60 * 60 * 1000));
+      const expires = "expires=" + d.toUTCString();
+      document.cookie = name + "=" + value + ";" + expires + ";path=/";
+    }
+    function getCookie(name) {
+      const value = `; ${document.cookie}`;
+      const parts = value.split(`; ${name}=`);
+      if (parts.length === 2) return parts.pop().split(';').shift();
+    }
+
+    // ================================================
+    // 3. Gestion de la logique du scan NFC
+    // ================================================
+    const statusElem = document.getElementById("status");
+    const photoDisplay = document.getElementById("photoDisplay");
+    const siteButtons = {
+      site1: document.getElementById("site1"),
+      site2: document.getElementById("site2"),
+      site3: document.getElementById("site3")
+    };
+
+    // Fonction de gestion d'un scan pour un site donné
+    async function handleScan(siteId) {
+      // Récupérer l'utilisateur courant
+      const user = auth.currentUser;
+      if (!user) {
+        alert("Utilisateur non authentifié.");
+        return;
+      }
+      const userId = user.uid;
+      const userDocRef = doc(db, "users", userId);
+      const userDocSnap = await getDoc(userDocRef);
+
+      let visits = 0;
+      let scannedSites = [];
+      let imagesSeen = [];
+
+      if (!userDocSnap.exists()) {
+        // Nouvel utilisateur : création du document avec le 1er scan
+        visits = 1;
+        scannedSites = [siteId];
+        imagesSeen = ["photo1"];
+        await setDoc(userDocRef, { visits, scannedSites, imagesSeen });
+      } else {
+        // Utilisateur existant
+        const userData = userDocSnap.data();
+        visits = userData.visits || 0;
+        scannedSites = userData.scannedSites || [];
+        imagesSeen = userData.imagesSeen || [];
+
+        // Vérifier si le site a déjà été scanné
+        if (scannedSites.includes(siteId)) {
+          statusElem.textContent = "Vous avez déjà scanné ce site. Essayez un autre site.";
+          return;
+        }
+        // Si l'utilisateur a déjà scanné les 3 sites, on ne fait rien
+        if (scannedSites.length >= 3) {
+          statusElem.textContent = "Vous avez déjà scanné tous les sites.";
+          return;
+        }
+        // Mise à jour du document utilisateur
+        visits += 1;
+        scannedSites.push(siteId);
+        // La photo attribuée correspond au nombre de sites scannés (1, 2 ou 3)
+        const photoNumber = scannedSites.length;
+        imagesSeen.push("photo" + photoNumber);
+        await updateDoc(userDocRef, {
+          visits: visits,
+          scannedSites: scannedSites,
+          imagesSeen: imagesSeen
+        });
+      }
+
+      // Mise à jour de la collection "sites"
+      const siteDocRef = doc(db, "sites", siteId);
+      try {
+        // Si le document existe, on ajoute l'UID dans le tableau "scans"
+        await updateDoc(siteDocRef, { scans: arrayUnion(userId) });
+      } catch (error) {
+        // Sinon, on le crée avec le premier scan
+        await setDoc(siteDocRef, { scans: [userId] });
+      }
+
+      // Récupération de la photo correspondant au scan
+      const photoNumber = scannedSites.length; // 1, 2 ou 3
+      const photoDocRef = doc(db, "photos", "photo" + photoNumber);
+      const photoDocSnap = await getDoc(photoDocRef);
+      if (photoDocSnap.exists()) {
+        const photoData = photoDocSnap.data();
+        const photoUrl = photoData.url;
+        // Affichage de l'image sur la page
+        photoDisplay.src = photoUrl;
+        photoDisplay.style.display = "block";
+        statusElem.textContent = "Vous avez reçu l'image #" + photoNumber;
+      } else {
+        statusElem.textContent = "Image non trouvée pour la photo #" + photoNumber;
+      }
+    }
+
+    // ================================================
+    // 4. Gestion des événements sur les boutons de scan
+    // ================================================
+    siteButtons.site1.addEventListener("click", () => handleScan("site1"));
+    siteButtons.site2.addEventListener("click", () => handleScan("site2"));
+    siteButtons.site3.addEventListener("click", () => handleScan("site3"));
+  </script>
+</body>
 </html>
