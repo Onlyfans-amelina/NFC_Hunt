@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>NFC Hunt - Hunt1</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #E6F7FF;
+      margin: 20px;
+      color: #333;
+    }
+    h1 {
+      color: #00AFF0;
+      text-align: center;
+    }
+    .main-image {
+      display: block;
+      margin: 0 auto;
+      max-width: 600px;
+      width: 100%;
+    }
+    .indice-btn {
+      padding: 10px 20px;
+      margin: 5px;
+      background-color: #00AFF0;
+      border: none;
+      color: white;
+      font-size: 16px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .indice-btn:disabled {
+      background-color: #cccccc;
+      cursor: not-allowed;
+    }
+    #countdown {
+      font-size: 18px;
+      margin: 10px 0;
+      color: #00AFF0;
+      text-align: center;
+    }
+    .indice-text {
+      margin: 10px 0;
+      padding: 10px;
+      border: 1px solid #00AFF0;
+      border-radius: 5px;
+      background-color: #f0faff;
+      display: none;
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    p {
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <h1>NFC Hunt - Hunt1</h1>
+  
+  <!-- Image principale chargée depuis GitHub -->
+  <img class="main-image" src="https://raw.githubusercontent.com/votre-utilisateur/votre-repo/main/hunt/hunt1.jpg" alt="Image Hunt1">
+  
+  <p>Bienvenue dans la chasse au trésor NFC.<br>
+  Suivez les indices pour découvrir le Gift.</p>
+  
+  <!-- Compte à rebours -->
+  <div id="countdown">Déblocage des indices dans : <span id="timer">10</span> secondes</div>
+  
+  <!-- Boutons pour débloquer les indices -->
+  <div style="text-align: center;">
+    <button class="indice-btn" id="indice1" disabled>Indice 1</button>
+    <button class="indice-btn" id="indice2" disabled>Indice 2</button>
+    <button class="indice-btn" id="indice3" disabled>Indice 3</button>
+  </div>
+  
+  <!-- Textes des indices (clés pour découvrir le Gift) -->
+  <div id="indice1-text" class="indice-text">Indice 1 : Cherchez le symbole caché dans l'image.</div>
+  <div id="indice2-text" class="indice-text">Indice 2 : Le code secret est lié à la lumière bleue.</div>
+  <div id="indice3-text" class="indice-text">Indice 3 : La réponse se trouve dans l'ombre du passé.</div>
+  
+  <!-- Insertion des scripts Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  
+  <script>
+    /***** Configuration Firebase *****/
+    const firebaseConfig = {
+      apiKey: "AIzaSyCL...",
+      authDomain: "amelina-a6063.firebaseapp.com",
+      projectId: "amelina-a6063",
+      storageBucket: "amelina-a6063.appspot.com",
+      messagingSenderId: "1234567890",
+      appId: "1:1234567890:web:abcdef123456"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    
+    /***** Fonctions de gestion des cookies *****/
+    function getCookie(name) {
+      const value = "; " + document.cookie;
+      const parts = value.split("; " + name + "=");
+      if (parts.length === 2) return parts.pop().split(";").shift();
+    }
+    
+    function setCookie(name, value, days = 30) {
+      const d = new Date();
+      d.setTime(d.getTime() + (days * 24 * 60 * 60 * 1000));
+      const expires = "expires=" + d.toUTCString();
+      document.cookie = name + "=" + value + ";" + expires + ";path=/";
+    }
+    
+    /***** Initialisation de l'utilisateur *****/
+    async function initUser() {
+      let userID = getCookie('userID');
+      if (!userID) {
+        userID = 'user_' + Date.now();
+        setCookie('userID', userID, 30);
+        await db.collection('users').doc(userID).set({
+          created_at: firebase.firestore.FieldValue.serverTimestamp(),
+          nfc_hunt: [],
+          nfc_gift: [],
+          nfc_indice: [],
+          nfc_tag: [],
+          history: []
+        });
+      }
+      return userID;
+    }
+    
+    /***** Enregistrement de l'ouverture de la page Hunt *****/
+    async function logHuntOpening(userID, huntID) {
+      const timestamp = firebase.firestore.FieldValue.serverTimestamp();
+      // Enregistrement dans l'historique de l'utilisateur
+      await db.collection('users').doc(userID).update({
+        history: firebase.firestore.FieldValue.arrayUnion(`Ouverture de ${huntID} à ${new Date().toLocaleString()}`)
+      });
+      // Création ou mise à jour de la collection nfc_hunt
+      await db.collection('nfc_hunt').doc(huntID).set({
+        created_at: timestamp,
+        associated_users: firebase.firestore.FieldValue.arrayUnion(userID),
+        indices: []
+      }, { merge: true });
+    }
+    
+    /***** Démarrage du compte à rebours pour débloquer les indices *****/
+    function startCountdown() {
+      let timeLeft = 10;
+      const timerEl = document.getElementById('timer');
+      const countdownInterval = setInterval(() => {
+        timeLeft--;
+        timerEl.textContent = timeLeft;
+        if (timeLeft <= 0) {
+          clearInterval(countdownInterval);
+          // Débloquer les boutons des indices
+          document.getElementById('indice1').disabled = false;
+          document.getElementById('indice2').disabled = false;
+          document.getElementById('indice3').disabled = false;
+          document.getElementById('countdown').textContent = "Indices disponibles :";
+        }
+      }, 1000);
+    }
+    
+    /***** Affichage d'un indice et enregistrement de l'activité *****/
+    async function revealIndice(indiceNum) {
+      const indiceTextEl = document.getElementById(`indice${indiceNum}-text`);
+      indiceTextEl.style.display = 'block';
+      const userID = getCookie('userID');
+      // Enregistrer la consultation de cet indice dans l'historique de l'utilisateur
+      await db.collection('users').doc(userID).update({
+        nfc_indice: firebase.firestore.FieldValue.arrayUnion(`Indice ${indiceNum} consulté à ${new Date().toLocaleString()}`)
+      });
+    }
+    
+    /***** Initialisation de la page Hunt *****/
+    async function initHuntPage() {
+      const userID = await initUser();
+      const huntID = "hunt_001";
+      await logHuntOpening(userID, huntID);
+      startCountdown();
+    }
+    
+    // Ajout des écouteurs d'événements sur les boutons des indices
+    document.getElementById('indice1').addEventListener('click', () => revealIndice(1));
+    document.getElementById('indice2').addEventListener('click', () => revealIndice(2));
+    document.getElementById('indice3').addEventListener('click', () => revealIndice(3));
+    
+    // Lancement de l'initialisation
+    initHuntPage();
+  </script>
+</body>
+</html>
