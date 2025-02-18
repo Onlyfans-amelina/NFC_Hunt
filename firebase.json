@@ -7,11 +7,16 @@
       "**/node_modules/**"
     ],
     "rewrites": [
-      {
-        "source": "**",
-        "destination": "/index.html"
-      }
-    ]
+  {
+    "source": "/firebase-config.json",
+    "destination": "/firebase-config.json"
+  },
+  {
+    "source": "**",
+    "destination": "/index.html"
+  }
+]
+
   },
   "firestore": {
     "rules": "firestore.rules",

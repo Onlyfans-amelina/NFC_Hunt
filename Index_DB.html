@@ -2,176 +2,237 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Jeu NFC avec Firebase Firestore</title>
-  <!-- Import de Tailwind CSS depuis CDN -->
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <title>Interface Chasse NFC</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    #hunt-info { max-width: 600px; margin: auto; }
+    #hunt-photo { width: 100%; max-width: 600px; height: auto; margin-bottom: 20px; }
+    button { margin: 10px 0; padding: 10px 20px; font-size: 16px; }
+    #indice-text { white-space: pre-wrap; margin-top: 20px; font-weight: bold; }
+    .timer { color: #555; margin-bottom: 10px; }
+  </style>
 </head>
-<body class="bg-gray-100">
-  <div class="container mx-auto p-4">
-    <h1 class="text-3xl font-bold text-center mb-4">Jeu NFC</h1>
-    <p class="text-center mb-4" id="status">Veuillez scanner un site NFC.</p>
-    <div class="flex justify-center space-x-4">
-      <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" id="site1">Scanner Site 1</button>
-      <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" id="site2">Scanner Site 2</button>
-      <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" id="site3">Scanner Site 3</button>
-    </div>
-    <div class="mt-6 text-center">
-      <img id="photoDisplay" class="mx-auto" src="" alt="Photo reçue" style="max-width: 300px; display:none;">
-    </div>
+<body>
+  <div id="hunt-info">
+    <h1 id="hunt-title">Chargement...</h1>
+    <img id="hunt-photo" src="" alt="Photo de la chasse">
+    <p id="hunt-description"></p>
+    
+    <button id="indice1">Indice 1</button>
+    <div id="timer1" class="timer"></div>
+
+    <button id="indice2" disabled>Indice 2</button>
+    <div id="timer2" class="timer"></div>
+
+    <button id="indice3" disabled>Indice 3</button>
+
+    <div id="indice-text"></div>
   </div>
 
-  <!-- Script principal en mode module -->
+  <!-- Inclusion des SDK Firebase -->
+
   <script type="module">
-    // Import des modules Firebase
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-app.js";
-    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-auth.js";
-    import { getFirestore, doc, getDoc, setDoc, updateDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-firestore.js";
-
-    // ================================================
-    // 1. Configuration Firebase (remplacez les valeurs)
-    // ================================================
-    const firebaseConfig = {
-        apiKey: "AIzaSyCLQMSzHNiOfXD-umi194rayB3-T0_0ekQ",
-  authDomain: "amelina-a6063.firebaseapp.com",
-  databaseURL: "https://amelina-a6063-default-rtdb.firebaseio.com",
-  projectId: "amelina-a6063",
-  storageBucket: "amelina-a6063.firebasestorage.app",
-  messagingSenderId: "221285415211",
-  appId: "1:221285415211:web:1db56bcfe7e3305de02d6e"
-    };
-
-    // Initialisation de Firebase
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+    import { getFirestore } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+  
+    import firebaseConfig from './firebase-config.js';
+  
+    // Initialiser Firebase
     const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
+ 
+  
+    console.log("✅ Firebase connecté !");
+  </script>
+  
+  <script>
+    // Référence à Firestore
+    const db = firebase.firestore();
 
-    // ================================================
-    // 2. Authentification anonyme et gestion des cookies
-    // ================================================
-    onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        try {
-          const result = await signInAnonymously(auth);
-          console.log("Authentification anonyme réussie :", result.user.uid);
-          setCookie("userId", result.user.uid, 7); // valable 7 jours
-        } catch (error) {
-          console.error("Erreur d'authentification anonyme :", error);
-        }
-      } else {
-        console.log("Utilisateur déjà authentifié :", user.uid);
-        setCookie("userId", user.uid, 7);
-      }
-    });
+    // Variable globale pour stocker l'ID du document utilisateur
+    let currentUserDocId = null;
 
-    // Fonctions utilitaires pour les cookies
-    function setCookie(name, value, days) {
-      const d = new Date();
-      d.setTime(d.getTime() + (days * 24 * 60 * 60 * 1000));
-      const expires = "expires=" + d.toUTCString();
-      document.cookie = name + "=" + value + ";" + expires + ";path=/";
-    }
+    /** -------------------
+     * Fonctions utilitaires pour les cookies
+     * ------------------- */
     function getCookie(name) {
-      const value = `; ${document.cookie}`;
-      const parts = value.split(`; ${name}=`);
-      if (parts.length === 2) return parts.pop().split(';').shift();
+      const nameEQ = name + "=";
+      const ca = document.cookie.split(';');
+      for (let i = 0; i < ca.length; i++) {
+        let c = ca[i];
+        while (c.charAt(0) === ' ') c = c.substring(1);
+        if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length);
+      }
+      return null;
     }
 
-    // ================================================
-    // 3. Gestion de la logique du scan NFC
-    // ================================================
-    const statusElem = document.getElementById("status");
-    const photoDisplay = document.getElementById("photoDisplay");
-    const siteButtons = {
-      site1: document.getElementById("site1"),
-      site2: document.getElementById("site2"),
-      site3: document.getElementById("site3")
-    };
-
-    // Fonction de gestion d'un scan pour un site donné
-    async function handleScan(siteId) {
-      // Récupérer l'utilisateur courant
-      const user = auth.currentUser;
-      if (!user) {
-        alert("Utilisateur non authentifié.");
-        return;
+    function setCookie(name, value, days) {
+      let expires = "";
+      if (days) {
+        const date = new Date();
+        date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+        expires = "; expires=" + date.toUTCString();
       }
-      const userId = user.uid;
-      const userDocRef = doc(db, "users", userId);
-      const userDocSnap = await getDoc(userDocRef);
+      document.cookie = name + "=" + value + expires + "; path=/";
+    }
 
-      let visits = 0;
-      let scannedSites = [];
-      let imagesSeen = [];
+    function generateCookieId() {
+      // Génère un identifiant utilisateur aléatoire
+      return 'user_' + Math.random().toString(36).substr(2, 9);
+    }
 
-      if (!userDocSnap.exists()) {
-        // Nouvel utilisateur : création du document avec le 1er scan
-        visits = 1;
-        scannedSites = [siteId];
-        imagesSeen = ["photo1"];
-        await setDoc(userDocRef, { visits, scannedSites, imagesSeen });
-      } else {
-        // Utilisateur existant
-        const userData = userDocSnap.data();
-        visits = userData.visits || 0;
-        scannedSites = userData.scannedSites || [];
-        imagesSeen = userData.imagesSeen || [];
-
-        // Vérifier si le site a déjà été scanné
-        if (scannedSites.includes(siteId)) {
-          statusElem.textContent = "Vous avez déjà scanné ce site. Essayez un autre site.";
-          return;
-        }
-        // Si l'utilisateur a déjà scanné les 3 sites, on ne fait rien
-        if (scannedSites.length >= 3) {
-          statusElem.textContent = "Vous avez déjà scanné tous les sites.";
-          return;
-        }
-        // Mise à jour du document utilisateur
-        visits += 1;
-        scannedSites.push(siteId);
-        // La photo attribuée correspond au nombre de sites scannés (1, 2 ou 3)
-        const photoNumber = scannedSites.length;
-        imagesSeen.push("photo" + photoNumber);
-        await updateDoc(userDocRef, {
-          visits: visits,
-          scannedSites: scannedSites,
-          imagesSeen: imagesSeen
-        });
-      }
-
-      // Mise à jour de la collection "sites"
-      const siteDocRef = doc(db, "sites", siteId);
-      try {
-        // Si le document existe, on ajoute l'UID dans le tableau "scans"
-        await updateDoc(siteDocRef, { scans: arrayUnion(userId) });
-      } catch (error) {
-        // Sinon, on le crée avec le premier scan
-        await setDoc(siteDocRef, { scans: [userId] });
-      }
-
-      // Récupération de la photo correspondant au scan
-      const photoNumber = scannedSites.length; // 1, 2 ou 3
-      const photoDocRef = doc(db, "photos", "photo" + photoNumber);
-      const photoDocSnap = await getDoc(photoDocRef);
-      if (photoDocSnap.exists()) {
-        const photoData = photoDocSnap.data();
-        const photoUrl = photoData.url;
-        // Affichage de l'image sur la page
-        photoDisplay.src = photoUrl;
-        photoDisplay.style.display = "block";
-        statusElem.textContent = "Vous avez reçu l'image #" + photoNumber;
-      } else {
-        statusElem.textContent = "Image non trouvée pour la photo #" + photoNumber;
+    /** -------------------
+     * Enregistrement d'un événement dans l'historique de l'utilisateur
+     * ------------------- */
+    function recordEvent(eventName) {
+      if (currentUserDocId) {
+        db.collection("users").doc(currentUserDocId).update({
+          history: firebase.firestore.FieldValue.arrayUnion({
+            event: eventName,
+            timestamp: new Date().toLocaleString()
+          })
+        }).catch(error => console.error("Erreur lors de l'enregistrement de l'événement :", error));
       }
     }
 
-    // ================================================
-    // 4. Gestion des événements sur les boutons de scan
-    // ================================================
-    siteButtons.site1.addEventListener("click", () => handleScan("site1"));
-    siteButtons.site2.addEventListener("click", () => handleScan("site2"));
-    siteButtons.site3.addEventListener("click", () => handleScan("site3"));
+    /** -------------------
+     * Initialisation de l'utilisateur via cookie et Firestore
+     * ------------------- */
+    function initUser() {
+      let userCookie = getCookie("userCookie");
+      if (!userCookie) {
+        // Si aucun cookie, en créer un nouveau
+        userCookie = generateCookieId();
+        setCookie("userCookie", userCookie, 7); // valable 7 jours
+        // Créer l'utilisateur dans Firestore
+        db.collection("users").add({
+          cookie_id: userCookie,
+          created_at: firebase.firestore.FieldValue.serverTimestamp(),
+          gift_opened_count: 0,
+          history: []
+        }).then(docRef => {
+          currentUserDocId = docRef.id;
+          recordEvent("Page NFC ouverte");
+        }).catch(error => console.error("Erreur lors de la création de l'utilisateur :", error));
+      } else {
+        // Si le cookie existe, vérifier si l'utilisateur est présent en base
+        db.collection("users").where("cookie_id", "==", userCookie).get()
+          .then(querySnapshot => {
+            if (querySnapshot.empty) {
+              // Aucun utilisateur trouvé, en créer un nouveau
+              db.collection("users").add({
+                cookie_id: userCookie,
+                created_at: firebase.firestore.FieldValue.serverTimestamp(),
+                gift_opened_count: 0,
+                history: []
+              }).then(docRef => {
+                currentUserDocId = docRef.id;
+                recordEvent("Page NFC ouverte");
+              });
+            } else {
+              querySnapshot.forEach(doc => {
+                currentUserDocId = doc.id;
+              });
+              recordEvent("Page NFC ouverte");
+            }
+          }).catch(error => console.error("Erreur lors de la récupération de l'utilisateur :", error));
+      }
+    }
+    // Lancer l'initialisation de l'utilisateur
+    initUser();
+
+    /** -------------------
+     * Récupération du paramètre d'URL (ex: ?hunt=hunt_001)
+     * ------------------- */
+    function getHuntIdFromURL() {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('hunt');
+    }
+
+    /** -------------------
+     * Chargement des informations de la chasse
+     * ------------------- */
+    const huntId = getHuntIdFromURL();
+    if (huntId) {
+      db.collection("nfc_hunt").doc(huntId).get().then(doc => {
+        if (doc.exists) {
+          const huntData = doc.data();
+          document.getElementById("hunt-title").innerText = huntData.name || "Titre non défini";
+          document.getElementById("hunt-description").innerText = huntData.description || "";
+          document.getElementById("hunt-photo").src = huntData.photo_url || "";
+
+          // Récupération des indices depuis la sous-collection "indices"
+          doc.ref.collection("indices").get().then(snapshot => {
+            let indices = [];
+            snapshot.forEach(indiceDoc => {
+              indices.push(indiceDoc.data());
+            });
+            // Tri des indices (exemple avec un identifiant de type "indice_001", "indice_002", etc.)
+            indices.sort((a, b) => {
+              const numA = parseInt(a.customId.split('_')[1]);
+              const numB = parseInt(b.customId.split('_')[1]);
+              return numA - numB;
+            });
+            const indiceTexts = indices.map(ind => ind.text);
+            setupIndiceButtons(indiceTexts);
+          }).catch(error => console.error("Erreur lors du chargement des indices :", error));
+        } else {
+          console.error("Aucune chasse trouvée pour l'ID :", huntId);
+        }
+      }).catch(error => console.error("Erreur lors de la récupération de la chasse :", error));
+    } else {
+      console.error("Aucun paramètre 'hunt' trouvé dans l'URL.");
+    }
+
+    /** -------------------
+     * Fonction pour démarrer un compte à rebours et activer un bouton à l'issue du délai
+     * ------------------- */
+    function startCountdown(duration, timerElement, buttonToEnable) {
+      let timeLeft = duration;
+      timerElement.innerText = "Débloque dans " + timeLeft + "s";
+      const countdownInterval = setInterval(() => {
+        timeLeft--;
+        timerElement.innerText = "Débloque dans " + timeLeft + "s";
+        if (timeLeft <= 0) {
+          clearInterval(countdownInterval);
+          timerElement.innerText = "";
+          buttonToEnable.disabled = false;
+        }
+      }, 1000);
+    }
+
+    /** -------------------
+     * Configuration des boutons d'indices et logique de déblocage séquentiel
+     * ------------------- */
+    function setupIndiceButtons(indiceTexts) {
+      const btnIndice1 = document.getElementById("indice1");
+      const btnIndice2 = document.getElementById("indice2");
+      const btnIndice3 = document.getElementById("indice3");
+      const timer1 = document.getElementById("timer1");
+      const timer2 = document.getElementById("timer2");
+      const indiceTextDiv = document.getElementById("indice-text");
+
+      btnIndice1.addEventListener("click", function() {
+        indiceTextDiv.innerText = indiceTexts[0] || "Indice 1 non disponible";
+        recordEvent("Indice 1 découvert");
+        btnIndice1.disabled = true;
+        // Lancer un compte à rebours de 10s pour débloquer le bouton Indice 2
+        startCountdown(10, timer1, btnIndice2);
+      });
+
+      btnIndice2.addEventListener("click", function() {
+        indiceTextDiv.innerText += "\n" + (indiceTexts[1] || "Indice 2 non disponible");
+        recordEvent("Indice 2 découvert");
+        btnIndice2.disabled = true;
+        // Démarrer un compte à rebours de 10s pour débloquer le bouton Indice 3
+        startCountdown(10, timer2, btnIndice3);
+      });
+
+      btnIndice3.addEventListener("click", function() {
+        indiceTextDiv.innerText += "\n" + (indiceTexts[2] || "Indice 3 non disponible");
+        recordEvent("Indice 3 découvert");
+        btnIndice3.disabled = true;
+      });
+    }
   </script>
 </body>
 </html>
