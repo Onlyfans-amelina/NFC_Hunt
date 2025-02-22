@@ -4,226 +4,820 @@
   <meta charset="UTF-8">
   <title>Interface Chasse NFC</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
-    #hunt-info { max-width: 600px; margin: auto; }
-    #hunt-photo { width: 100%; max-width: 600px; height: auto; margin-bottom: 20px; }
-    button { margin: 10px 0; padding: 10px 20px; font-size: 16px; }
-    #indice-text { white-space: pre-wrap; margin-top: 20px; font-weight: bold; }
-    .timer { color: #555; margin-bottom: 10px; }
+    /* Palette de couleurs inspirée d'OnlyFans : bleu clair dominant, accents gris et blanc */
+    :root {
+      --primary-color: #0099FF;       /* Bleu clair dominant */
+      --secondary-color: #0066CC;     /* Bleu foncé pour les accents */
+      --background-color: #F5F8FA;      /* Fond clair */
+      --text-color: #333333;           /* Texte foncé */
+      --border-color: #D9E6F2;         /* Bordures */
+    }
+    
+    body {
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background-color: var(--background-color);
+      color: var(--text-color);
+      /* On prévoit un espace en haut pour le header fixe */
+      padding-top: 70px;
+    }
+    
+    /* Header fixe attractif pour "Mon OnlyFans à 50%" */
+    #fixed-header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      background: linear-gradient(45deg, #00C6FF, #0072FF);
+      color: #fff;
+      text-align: center;
+      padding: 15px;
+      z-index: 1000;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    }
+    #fixed-header a {
+      color: #fff;
+      text-decoration: none;
+      font-size: 1.5rem;
+      font-weight: bold;
+    }
+    
+    /* Conteneur principal */
+    #main-container {
+      max-width: 800px;
+      margin: auto;
+    }
+    
+    /* Styles généraux pour les pages dynamiques (hunt, gift, hunt_liste, dashboard, employee) */
+    .page-container {
+      background: linear-gradient(45deg, #00C6FF, #0072FF);
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      border: 1px solid var(--border-color);
+      text-align: center;
+      color: #ffffff;
+      text-shadow: 1px 1px 3px rgba(0,0,0,0.4);
+      visibility: hidden; /* Masqué jusqu'au chargement final */
+    }
+    
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 20px;
+    }
+    
+    p {
+      font-size: 1rem;
+      line-height: 1.5;
+      margin-bottom: 20px;
+    }
+    
+    /* Boutons d'indice (pour la page hunt) */
+    .indice-button {
+      display: block;
+      width: 100%;
+      margin: 10px 0;
+      padding: 10px 20px;
+      background-color: var(--secondary-color);
+      color: #FFFFFF;
+      border: 2px solid #FFFFFF;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.3s ease, border-color 0.3s ease;
+      text-align: center;
+      box-sizing: border-box;
+    }
+    
+    .indice-button:disabled {
+      background-color: #cccccc;
+      cursor: not-allowed;
+    }
+    
+    .indice-button:hover:not(:disabled) {
+      background-color: var(--secondary-color);
+    }
+    
+    #toggle-nsfw {
+      display: block;
+      width: 100%;
+      margin: 10px 0;
+      padding: 10px 20px;
+      background-color: var(--secondary-color);
+      color: #FFFFFF;
+      border: 2px solid #FFFFFF;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.3s ease, border-color 0.3s ease;
+    }
+    
+    #hunt-photo {
+      width: 100%;
+      height: auto;
+      margin-bottom: 20px;
+      display: none; /* La photo est cachée par défaut */
+      border-radius: 4px;
+      border: 1px solid var(--border-color);
+    }
+    
+    .timer {
+      color: var(--secondary-color);
+      font-size: 0.9rem;
+      margin-bottom: 15px;
+    }
+    
+    #indice-text {
+      white-space: pre-wrap;
+      margin-top: 20px;
+      font-weight: bold;
+      font-size: 1rem;
+    }
+    
+    /* Style pour le formulaire de connexion dashboard */
+    #dashboard-login-container {
+      background: linear-gradient(45deg, #00C6FF, #0072FF);
+      padding: 20px;
+      border-radius: 8px;
+      text-align: center;
+      color: #fff;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      margin: auto;
+      max-width: 400px;
+      visibility: hidden;
+    }
+    #dashboard-login-container input {
+      width: 80%;
+      padding: 10px;
+      margin: 5px 0;
+      border: none;
+      border-radius: 4px;
+      font-size: 1rem;
+    }
+    #dashboard-login-container button {
+      padding: 10px 20px;
+      background-color: var(--secondary-color);
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    
+    /* Pop-up de vérification d'âge adaptée au style principal */
+    #age-popup {
+      display: none; /* Masquée par défaut */
+      position: fixed;
+      top: 0; 
+      left: 0;
+      width: 100%; 
+      height: 100%;
+      background: rgba(0, 118, 255, 0.8); /* Fond semi-transparent */
+      z-index: 2000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #age-popup-content {
+      background: linear-gradient(45deg, #00C6FF, #0072FF);
+      padding: 20px;
+      border-radius: 12px;
+      text-align: center;
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+    #age-popup-content button {
+      margin: 5px;
+      padding: 10px 20px;
+      background: #0066CC;
+      border: none;
+      border-radius: 4px;
+      color: #fff;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    #age-popup-content button:hover {
+      background: #0050a0;
+    }
+    
   </style>
 </head>
 <body>
-  <div id="hunt-info">
-    <h1 id="hunt-title">Chargement...</h1>
-    <img id="hunt-photo" src="" alt="Photo de la chasse">
-    <p id="hunt-description"></p>
-    
-    <button id="indice1">Indice 1</button>
-    <div id="timer1" class="timer"></div>
-
-    <button id="indice2" disabled>Indice 2</button>
-    <div id="timer2" class="timer"></div>
-
-    <button id="indice3" disabled>Indice 3</button>
-
-    <div id="indice-text"></div>
+  <!-- Bandeau fixe pour "Mon OnlyFans à 50%" -->
+  <div id="fixed-header">
+    <a href="https://onlyfans-amelina.com" target="_blank">Mon OnlyFans à 50%</a>
   </div>
-
-  <!-- Inclusion des SDK Firebase -->
-  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
-  <!-- Fichier de configuration Firebase -->
-  <script src="firebase-config.js"></script>
   
-  <script>
-    // Référence à Firestore
-    const db = firebase.firestore();
-
-    // Variable globale pour stocker l'ID du document utilisateur
-    let currentUserDocId = null;
-
-    /** -------------------
-     * Fonctions utilitaires pour les cookies
-     * ------------------- */
-    function getCookie(name) {
-      const nameEQ = name + "=";
-      const ca = document.cookie.split(';');
-      for (let i = 0; i < ca.length; i++) {
-        let c = ca[i];
-        while (c.charAt(0) === ' ') c = c.substring(1);
-        if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length);
+  <div id="main-container">
+    <!-- Le contenu dynamique sera injecté ici -->
+    <div id="page-content"></div>
+  </div>
+  
+  <!-- Pop-up de vérification d'âge (affichée une seule fois via cookie) -->
+  <div id="age-popup">
+    <div id="age-popup-content">
+      <p>Êtes-vous majeur (18 ans et plus) ?</p>
+      <button id="age-yes">Oui, j'ai 18 ans</button>
+      <button id="age-no">Non</button>
+    </div>
+  </div>
+  
+  <!-- Formulaire de connexion pour le Dashboard -->
+  <div id="dashboard-login-container">
+    <h2>Connexion Administrateur</h2>
+    <input type="email" id="admin-email" placeholder="Email" required>
+    <input type="password" id="admin-password" placeholder="Mot de passe" required>
+    <button id="admin-login">Se Connecter</button>
+    <p id="login-message"></p>
+  </div>
+  
+  <script type="module">
+    /*********************** IMPORTS & INITIALISATION FIREBASE ************************/
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+    import { enableIndexedDbPersistence, getFirestore, doc, getDoc, setDoc, updateDoc, serverTimestamp, arrayUnion } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+    import { getAuth, signInAnonymously, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+    
+    const firebaseConfig = {
+      apiKey: "AIzaSyCLQMSzHNiOfXD-umi194rayB3-T0_0ekQ",
+      authDomain: "amelina-a6063.firebaseapp.com",
+      projectId: "amelina-a6063",
+      storageBucket: "amelina-a6063.appspot.com",
+      messagingSenderId: "221285415211",
+      appId: "1:221285415211:web:1db56bcfe7e3305de02d6e"
+    };
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    enableIndexedDbPersistence(db).catch((err) => {
+      if (err.code === 'failed-precondition') {
+        console.warn("La persistance ne peut être activée : plusieurs onglets ouverts.");
+      } else if (err.code === 'unimplemented') {
+        console.warn("La persistance hors ligne n'est pas supportée par ce navigateur.");
       }
-      return null;
+    });
+    const auth = getAuth(app);
+    console.log("✅ Firebase connecté et Firestore prêt !");
+    
+    /*********************** GLOBAUX & OPTIMISATION ************************/
+    let firestoreRequestCount = 0;
+    function safeGetDoc(ref) {
+      firestoreRequestCount++;
+      return getDoc(ref).then(result => {
+        console.log(`[Firestore] getDoc #${firestoreRequestCount}`);
+        return result;
+      });
     }
-
-    function setCookie(name, value, days) {
-      let expires = "";
-      if (days) {
-        const date = new Date();
-        date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
-        expires = "; expires=" + date.toUTCString();
+    function safeUpdateDoc(ref, data) {
+      firestoreRequestCount++;
+      return updateDoc(ref, data).then(result => {
+        console.log(`[Firestore] updateDoc #${firestoreRequestCount}`);
+        return result;
+      });
+    }
+    function safeSetDoc(ref, data, options) {
+      firestoreRequestCount++;
+      return setDoc(ref, data, options).then(result => {
+        console.log(`[Firestore] setDoc #${firestoreRequestCount}`);
+        return result;
+      });
+    }
+    
+    // Variables globales
+    let expectedAnswer = null;
+    let attemptCount = 0;
+    const maxAttempts = 3;
+    let huntData = {};      // Données de la chasse (pour page hunt)
+    let globalClues = {};   // Pour stocker les indices récupérés
+    let indicesUnlocked = false; // Pour la page hunt : si réponse trouvée ou tag présent
+    const heartbeatInterval = 15 * 60 * 1000; // 15 minutes
+    let pendingEvents = []; // Stockage local des events
+    
+    // Récupération des paramètres d'URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const paramGift = urlParams.get('gift');         // GiftID pour page gift
+    const paramHunt = urlParams.get('hunt');           // HuntID ou "hunt_liste" pour page hunt ou liste
+    const paramDashboard = urlParams.get('dashboard'); // Dashboard page
+    const paramEmployee = urlParams.get('employee');   // Nouveau paramètre pour la page employé
+    
+    const urlTagId = urlParams.get('tagid');           // Pour utilisation dans hunt (tag) – en minuscules
+    
+    /*********************** POP-UP DE VÉRIFICATION D'ÂGE (avec cookie) *************************/
+    function checkAgeVerification() {
+      if (!document.cookie.split('; ').find(row => row.startsWith("ageVerified="))) {
+        document.getElementById("age-popup").style.display = "flex";
       }
-      document.cookie = name + "=" + value + expires + "; path=/";
     }
-
-    function generateCookieId() {
-      // Génère un identifiant utilisateur aléatoire
-      return 'user_' + Math.random().toString(36).substr(2, 9);
+    document.getElementById("age-yes").addEventListener("click", () => {
+      document.cookie = "ageVerified=true; path=/; max-age=" + 60*60*24*365;
+      document.getElementById("age-popup").style.display = "none";
+    });
+    document.getElementById("age-no").addEventListener("click", () => {
+      window.location.href = "https://www.google.com";
+    });
+    checkAgeVerification();
+    
+    /*********************** FONCTIONS COMMUNES *************************/
+    function sanitizeText(text) {
+      const div = document.createElement("div");
+      div.innerText = text;
+      return div.innerText;
     }
-
-    /** -------------------
-     * Enregistrement d'un événement dans l'historique de l'utilisateur
-     * ------------------- */
-    function recordEvent(eventName) {
-      if (currentUserDocId) {
-        db.collection("users").doc(currentUserDocId).update({
-          history: firebase.firestore.FieldValue.arrayUnion({
-            event: eventName,
-            timestamp: new Date().toLocaleString()
-          })
-        }).catch(error => console.error("Erreur lors de l'enregistrement de l'événement :", error));
+    
+    async function recordHistory(eventData) {
+      try {
+        const uid = auth.currentUser.uid;
+        if (huntData.associated_tagid) eventData.tagId = huntData.associated_tagid;
+        const eventWithTimestamp = { ...eventData, timestamp: new Date() };
+        pendingEvents.push(eventWithTimestamp);
+        console.log("✅ Événement enregistré localement :", eventWithTimestamp);
+      } catch (error) {
+        console.error("❌ Erreur lors de l'enregistrement de l'historique :", error);
       }
     }
-
-    /** -------------------
-     * Initialisation de l'utilisateur via cookie et Firestore
-     * ------------------- */
-    function initUser() {
-      let userCookie = getCookie("userCookie");
-      if (!userCookie) {
-        // Si aucun cookie, en créer un nouveau
-        userCookie = generateCookieId();
-        setCookie("userCookie", userCookie, 7); // valable 7 jours
-        // Créer l'utilisateur dans Firestore
-        db.collection("users").add({
-          cookie_id: userCookie,
-          created_at: firebase.firestore.FieldValue.serverTimestamp(),
-          gift_opened_count: 0,
-          history: []
-        }).then(docRef => {
-          currentUserDocId = docRef.id;
-          recordEvent("Page NFC ouverte");
-        }).catch(error => console.error("Erreur lors de la création de l'utilisateur :", error));
+    
+    async function ensureUserHasFields(uid) {
+      const userRef = doc(db, "users", uid);
+      const userSnap = await safeGetDoc(userRef);
+      if (userSnap.exists()) {
+        const userData = userSnap.data();
+        let updates = {};
+        if (!userData.history) updates.history = [];
+        if (typeof userData.gift_opened_count === "undefined") updates.gift_opened_count = 0;
+        if (Object.keys(updates).length > 0) {
+          console.log("✅ (local) Champs manquants détectés :", updates);
+          pendingEvents.push({ event: "Mise à jour champs user", updates, timestamp: new Date() });
+        }
+      }
+    }
+    
+    async function initUser() {
+      const uid = auth.currentUser.uid;
+      console.log("Utilisateur anonyme connecté avec UID :", uid);
+      const userRef = doc(db, "users", uid);
+      const userSnap = await safeGetDoc(userRef);
+      if (!userSnap.exists()) {
+        console.log("✅ (local) Nouvel utilisateur à créer");
+        pendingEvents.push({ event: "Création utilisateur", uid, timestamp: new Date() });
       } else {
-        // Si le cookie existe, vérifier si l'utilisateur est présent en base
-        db.collection("users").where("cookie_id", "==", userCookie).get()
-          .then(querySnapshot => {
-            if (querySnapshot.empty) {
-              // Aucun utilisateur trouvé, en créer un nouveau
-              db.collection("users").add({
-                cookie_id: userCookie,
-                created_at: firebase.firestore.FieldValue.serverTimestamp(),
-                gift_opened_count: 0,
-                history: []
-              }).then(docRef => {
-                currentUserDocId = docRef.id;
-                recordEvent("Page NFC ouverte");
+        console.log("✅ Utilisateur déjà présent dans Firestore.");
+      }
+      await ensureUserHasFields(uid);
+      if (paramHunt && paramHunt !== "hunt_liste") {
+        await recordHistory({ page: "hunt", status: "En cours", huntId: paramHunt });
+      }
+    }
+    
+    async function recordUserActivity() {
+      try {
+        console.log("🟢 (local) Activité enregistrée, pas de requête Firestore. Total requêtes:", firestoreRequestCount);
+        pendingEvents.push({ event: "Heartbeat local", timestamp: new Date() });
+      } catch (error) {
+        console.error("❌ Erreur lors de la mise à jour de l'activité :", error);
+      }
+    }
+    
+    setInterval(recordUserActivity, heartbeatInterval);
+    
+    window.addEventListener("beforeunload", async () => {
+      try {
+        const uid = auth.currentUser.uid;
+        const userRef = doc(db, "users", uid);
+        pendingEvents.push({ event: "Status déconnecté", timestamp: new Date() });
+        await updateDoc(userRef, { status: "Déconnecté", history: arrayUnion(...pendingEvents) });
+        console.log("⚠️ Écriture finale avant fermeture :", pendingEvents);
+      } catch (error) {
+        console.error("❌ Erreur lors de la mise à jour avant fermeture :", error);
+      }
+    });
+    
+    /*********************** PAGES DYNAMIQUES *************************/
+    async function loadPage() {
+      if (paramEmployee) {
+        await loadEmployeePage();
+      } else if (paramGift) {
+        await loadGiftPage(paramGift);
+      } else if (paramDashboard) {
+        loadDashboardLoginForm();
+      } else if (paramHunt === "hunt_liste") {
+        await loadHuntListPage();
+      } else {
+        await loadHuntPage(paramHunt);
+      }
+    }
+    
+    /*********************** 1️⃣ Page Gift *************************/
+    async function loadGiftPage(giftId) {
+      console.log(`🔄 Chargement des données du gift (${giftId})...`);
+      const giftDocRef = doc(db, "gift", giftId);
+      try {
+        const giftSnap = await safeGetDoc(giftDocRef);
+        if (giftSnap.exists()) {
+          const giftData = giftSnap.data();
+          console.log("✅ Gift trouvé :", giftData);
+          const container = document.getElementById("page-content");
+          container.innerHTML = `
+            <div class="page-container" id="gift-page">
+              <h1>${sanitizeText(giftData.titre || "Titre non défini")}</h1>
+              <p>${sanitizeText(giftData.description || "")}</p>
+              <button id="reveal-gift-photo" class="indice-button">Révéler la photo</button>
+              <div id="gift-photo-container" style="display:none;">
+                <img src="${giftData.photo_url}" alt="Photo du gift" style="width:100%; border:1px solid var(--border-color); border-radius:4px;"/>
+              </div>
+              <button onclick="window.location.href='https://onlyfans-amelina.com'" class="indice-button">Mon OnlyFans à 50%</button>
+              <button onclick="window.location.href='index.html?hunt=hunt_liste'" class="indice-button">Liste des chasses</button>
+            </div>
+          `;
+          document.getElementById("reveal-gift-photo").addEventListener("click", () => {
+            document.getElementById("gift-photo-container").style.display = "block";
+          });
+          document.getElementById("gift-page").style.visibility = "visible";
+        } else {
+          console.error("❌ Aucun gift trouvé pour l'ID :", giftId);
+        }
+      } catch (error) {
+        console.error("❌ Erreur lors de la récupération du gift :", error);
+      }
+    }
+    
+    /*********************** 2️⃣ Page Hunt Liste *************************/
+    async function loadHuntListPage() {
+      console.log("🔄 Chargement de la liste des hunts...");
+      const huntListeRef = doc(db, "nfc_hunt", "hunt_liste");
+      try {
+        const listSnap = await getDoc(huntListeRef);
+        if (listSnap.exists()) {
+          const listData = listSnap.data();
+          console.log("✅ Hunt liste trouvée :", listData);
+          const container = document.getElementById("page-content");
+          let buttonsHtml = "";
+          if (listData.associate_hunt_id) {
+            try {
+              const huntRef = listData.associate_hunt_id;
+              const huntDoc = await getDoc(huntRef);
+              if (huntDoc.exists()) {
+                const huntId = huntDoc.id;
+                const huntTitle = huntDoc.data().titre || "Titre inconnu";
+                console.log(`🔹 Chasse trouvée : ${huntId} - ${huntTitle}`);
+                buttonsHtml = `
+                  <button class="indice-button" onclick="window.location.href='index.html?hunt=${huntId}'">
+                    ${sanitizeText(huntTitle)}
+                  </button>
+                `;
+              } else {
+                console.warn(`⚠️ Chasse référencée non trouvée : ${huntRef.path}`);
+                buttonsHtml = "<p>La chasse associée n'existe pas.</p>";
+              }
+            } catch (error) {
+              console.error(`❌ Erreur en récupérant la référence : ${listData.associate_hunt_id.path}`, error);
+              buttonsHtml = "<p>Erreur lors du chargement de la chasse.</p>";
+            }
+          } else {
+            buttonsHtml = "<p>Aucune chasse disponible.</p>";
+          }
+          container.innerHTML = `
+            <div class="page-container" id="hunt-list-page">
+              <h1>Liste des Chasses</h1>
+              ${buttonsHtml}
+              <button onclick="window.location.href='index.html'" class="indice-button">Retour</button>
+            </div>
+          `;
+          document.getElementById("hunt-list-page").style.visibility = "visible";
+        } else {
+          console.error("❌ Aucun document hunt_liste trouvé dans la collection nfc_hunt.");
+        }
+      } catch (error) {
+        console.error("❌ Erreur lors de la récupération de la hunt liste :", error);
+      }
+    }
+    
+    /*********************** 3️⃣ Page Dashboard *************************/
+    function loadDashboardLoginForm() {
+      const container = document.getElementById("page-content");
+      container.innerHTML = `
+        <div id="dashboard-login-container">
+          <h2>Connexion Administrateur</h2>
+          <input type="email" id="admin-email" placeholder="Email" required>
+          <input type="password" id="admin-password" placeholder="Mot de passe" required>
+          <button id="admin-login">Se Connecter</button>
+          <p id="login-message"></p>
+        </div>
+      `;
+      document.getElementById("dashboard-login-container").style.visibility = "visible";
+      
+      document.getElementById("admin-login").addEventListener("click", async () => {
+        const email = document.getElementById("admin-email").value;
+        const password = document.getElementById("admin-password").value;
+        const messageBox = document.getElementById("login-message");
+        try {
+          const userCredential = await signInWithEmailAndPassword(auth, email, password);
+          const user = userCredential.user;
+          console.log("✅ Connexion admin réussie :", user);
+          const adminUid = "gauby@hotmail.com";
+          if (user.uid === adminUid) {
+            messageBox.innerText = "Connexion réussie. Redirection...";
+            loadDashboardPage();
+          } else {
+            messageBox.innerText = "⚠️ Vous n'êtes pas administrateur.";
+            auth.signOut();
+          }
+        } catch (error) {
+          console.error("❌ Erreur de connexion admin :", error);
+          messageBox.innerText = "Échec de la connexion.";
+        }
+      });
+    }
+    
+    async function loadDashboardPage() {
+      console.log("🔄 Chargement du tableau de bord...");
+      const adminUid = "gauby@hotmail.com";
+      if (!auth.currentUser || auth.currentUser.uid !== adminUid) {
+        document.getElementById("page-content").innerHTML = "<p>Accès refusé.</p>";
+        return;
+      }
+      const container = document.getElementById("page-content");
+      container.innerHTML = `
+        <div class="page-container" id="dashboard-page">
+          <h1>Tableau de Bord</h1>
+          <p>Interface pour suivre les utilisateurs et chasses.</p>
+          <div id="map" style="width:100%; height:300px; background:#eee;">[Carte Interactive]</div>
+          <input type="text" id="query-input" placeholder="Tapez votre requête Firestore ici" style="width:80%;"/>
+          <button class="indice-button" onclick="alert('Exécution de la requête (exemple)')">Exécuter</button>
+          <button class="indice-button" onclick="alert('Ouverture de l\'interface d\'ajout (exemple)')">Ajouter un tag/hunt/gift/photo</button>
+          <button onclick="window.location.href='index.html'" class="indice-button">Retour</button>
+        </div>
+      `;
+      document.getElementById("dashboard-page").style.visibility = "visible";
+    }
+    
+    /*********************** 4️⃣ Page Employé (NOUVEAU PARAMÈTRE) *************************/
+    async function loadEmployeePage() {
+      console.log("🔄 Chargement de la page employé via le paramètre URL...");
+      const employeeDocRef = doc(db, "nfc_hunt", "hunt_001", "page_travailleur", "YDbbVF4QAuNt0VPfrPH6");
+      try {
+        const employeeSnap = await safeGetDoc(employeeDocRef);
+        if (employeeSnap.exists()) {
+          const employeeData = employeeSnap.data();
+          const container = document.getElementById("page-content");
+          container.innerHTML = `
+            <div class="page-container" id="employee-page">
+              <h1>${sanitizeText(employeeData.titre || "Titre non défini")}</h1>
+              <img src="${employeeData.photo_url || ""}" alt="Photo de l'employé" style="width:100%; border:1px solid var(--border-color); border-radius:4px; margin-bottom:20px;"/>
+              <p>${sanitizeText(employeeData.description || "")}</p>
+              <a href="mailto:${employeeData.email_contact}" class="indice-button" style="display:inline-block; margin:10px;">Contact</a>
+              <a href="${employeeData.url_1moisgratuit}" class="indice-button" style="display:inline-block; margin:10px;">1 Mois Gratuit</a>
+            </div>
+          `;
+          document.getElementById("employee-page").style.visibility = "visible";
+          console.log("✅ Page employé affichée.");
+        } else {
+          console.error("❌ Document employé non trouvé.");
+          document.getElementById("page-content").innerHTML = "<p>Erreur: données employé introuvables.</p>";
+        }
+      } catch (error) {
+        console.error("❌ Erreur lors de la récupération des données employé :", error);
+        document.getElementById("page-content").innerHTML = "<p>Erreur lors de la récupération des données employé.</p>";
+      }
+    }
+      
+
+    /*********************** 5️⃣ Page Hunt (par défaut) coucou *******fdfdfddfd*************/
+    async function loadHuntPage(huntIdParam) {
+      if (!huntIdParam) {
+        document.getElementById("page-content").innerHTML = "<p>Hunt non spécifié.</p>";
+        return;
+      }
+      console.log(`🔄 Chargement des données de la chasse (${huntIdParam})...`);
+      const huntDocRef = doc(db, "nfc_hunt", huntIdParam);
+      try {
+        const docSnap = await safeGetDoc(huntDocRef);
+        if (docSnap.exists()) {
+          huntData = docSnap.data();
+          expectedAnswer = huntData.expected_answer || "";
+          console.log("✅ expectedAnswer récupérée :", expectedAnswer);
+          await new Promise(res => setTimeout(res, 1500));
+          const container = document.getElementById("page-content");
+          container.innerHTML = `
+            <div class="page-container" id="hunt-page">
+              <h1 id="hunt-title">${sanitizeText(huntData.name || "Titre non défini")}</h1>
+              <p id="hunt-description">${sanitizeText(huntData.description || "")}</p>
+              <button id="toggle-nsfw">Afficher NSFW</button>
+              <br>
+              <img id="hunt-photo" src="${huntData.photo_url || ""}" alt="Photo de la chasse" style="display: none;"/>
+              <p id="hunt-description2">${sanitizeText(huntData.description2 || "")}</p>
+              <div id="answer-container" style="margin:20px 0;">
+                <input type="text" id="hunt-answer-input" placeholder="Entrez la réponse" style="width:80%; padding:10px; border:1px solid var(--border-color); border-radius:4px;">
+                <button id="hunt-answer-button" class="indice-button">Valider la réponse</button>
+                <p id="hunt-answer-message" style="color:red;"></p>
+              </div>
+              <div id="clues-container">
+                <button id="indice1" class="indice-button" disabled>Indice 1</button>
+                <button id="indice2" class="indice-button" disabled>Indice 2</button>
+                <button id="indice3" class="indice-button" disabled>Indice 3</button>
+              </div>
+              <button id="employee-access-button" class="indice-button">Accès Employé</button>
+            </div>
+          `;
+          document.getElementById("hunt-page").style.visibility = "visible";
+          
+          // Vérification du paramètre tagid (déjà présent)
+          let urlTagId = urlParams.get('tagid'); 
+          if (urlTagId && huntData.associated_tagid) {
+            if (urlTagId.startsWith("tag_")) {
+              urlTagId = urlTagId.substring(4);
+            }
+            let storedTagId = (typeof huntData.associated_tagid === "object" && huntData.associated_tagid.id)
+                              ? huntData.associated_tagid.id 
+                              : huntData.associated_tagid;
+            console.log(`🔍 tagid dans URL : ${urlTagId}`);
+            console.log(`🔍 associated_tagid dans Firestore : ${storedTagId}`);
+            if (urlTagId === storedTagId) {
+              console.log("✅ Tag NFC valide détecté, indice 1 débloqué automatiquement !");
+              indicesUnlocked = true;
+              const indice1Btn = document.getElementById("indice1");
+              indice1Btn.disabled = false;
+              indice1Btn.innerText = huntData.indice1 || "Aucun indice 1 défini.";
+              recordHistory({ page: "hunt", event: "Indice 1 affiché (auto via tag)", huntId: paramHunt, tagId: storedTagId });
+            } else {
+              console.log("❌ Le tagid dans l'URL ne correspond pas à celui enregistré.");
+            }
+          }
+          
+          // Vérification du paramètre tag_ref dans l'URL
+          const tagRefParam = urlParams.get('tag_ref');
+          if (tagRefParam) {
+            console.log("Paramètre tag_ref trouvé dans l'URL :", tagRefParam);
+            let processedTagRef = tagRefParam;
+            if (processedTagRef.startsWith("tag_")) {
+              processedTagRef = processedTagRef.substring(4);
+            }
+            console.log("Tag_ref traité :", processedTagRef);
+            const tagRefDocRef = doc(db, "nfc_hunt", huntIdParam, "tag_ref", processedTagRef);
+            const tagRefSnap = await safeGetDoc(tagRefDocRef);
+            if (tagRefSnap.exists()) {
+              console.log("✅ Document tag_ref trouvé, déverrouillage automatique de l'indice 1.");
+              indicesUnlocked = true;
+              const indice1Btn = document.getElementById("indice1");
+              indice1Btn.disabled = false;
+              indice1Btn.innerText = huntData.indice1 || "Aucun indice 1 défini.";
+              recordHistory({ page: "hunt", event: "Indice 1 affiché (auto via tag_ref)", huntId: paramHunt, tagId: processedTagRef });
+            } else {
+              console.log("❌ Aucun document correspondant trouvé pour tag_ref :", processedTagRef);
+            }
+          } else {
+            console.log("Aucun paramètre tag_ref fourni dans l'URL.");
+          }
+          
+          // Gestion de la réponse via la zone d'entrée
+          document.getElementById("hunt-answer-button").addEventListener("click", () => {
+            const answerInput = document.getElementById("hunt-answer-input").value;
+            console.log("Validation de la réponse de l'utilisateur :", answerInput);
+            if(answerInput === expectedAnswer) {
+              console.log("✅ Réponse correcte. Masquage de la zone de réponse et lancement du countdown pour l'indice 1.");
+              document.getElementById("answer-container").style.display = "none";
+              const indice1Btn = document.getElementById("indice1");
+              startCountdown(indice1Btn, 60, () => {
+                indice1Btn.disabled = false;
               });
             } else {
-              querySnapshot.forEach(doc => {
-                currentUserDocId = doc.id;
-              });
-              recordEvent("Page NFC ouverte");
+              console.log("❌ Réponse incorrecte.");
+              document.getElementById("hunt-answer-message").innerText = "Réponse incorrecte. Veuillez réessayer.";
             }
-          }).catch(error => console.error("Erreur lors de la récupération de l'utilisateur :", error));
+          });
+          
+          // Laisser le bouton Accès Employé tel quel (il reste présent dans la carte)
+          const empButton = document.getElementById("employee-access-button");
+          if(empButton) {
+            empButton.addEventListener("click", async () => {
+              console.log("Bouton Accès Employé cliqué.");
+              const accessCode = prompt("Veuillez entrer le code d'accès pour les employés:");
+              console.log("Code saisi :", accessCode);
+              if (!accessCode) return;
+              
+              const employeeDocRef = doc(db, "nfc_hunt", "hunt_001", "page_travailleur", "YDbbVF4QAuNt0VPfrPH6");
+              try {
+                const employeeSnap = await safeGetDoc(employeeDocRef);
+                if (employeeSnap.exists()) {
+                  const employeeData = employeeSnap.data();
+                  if (accessCode === employeeData.code_answers) {
+                    console.log("✅ Code d'accès employé correct.");
+                    const mainContainer = document.getElementById("main-container");
+                    mainContainer.innerHTML = `
+                      <div class="page-container" id="employee-page">
+                        <h1>${sanitizeText(employeeData.titre || "Titre non défini")}</h1>
+                        <img src="${employeeData.photo_url || ""}" alt="Photo de l'employé" style="width:100%; border:1px solid var(--border-color); border-radius:4px; margin-bottom:20px;"/>
+                        <p>${sanitizeText(employeeData.description || "")}</p>
+                        <a href="mailto:${employeeData.email_contact}" class="indice-button" style="display:inline-block; margin:10px;">Contact</a>
+                        <a href="${employeeData.url_1moisgratuit}" class="indice-button" style="display:inline-block; margin:10px;">1 Mois Gratuit</a>
+                      </div>
+                    `;
+                    console.log("Page employé affichée.");
+                  } else {
+                    console.log("❌ Code d'accès employé incorrect.");
+                    alert("Code d'accès incorrect.");
+                  }
+                } else {
+                  console.error("❌ Document employé non trouvé.");
+                  alert("Erreur: données employé introuvables.");
+                }
+              } catch (error) {
+                console.error("❌ Erreur lors de la récupération des données employé :", error);
+                alert("Erreur lors de la récupération des données.");
+              }
+            });
+          }
+          
+          // Initialiser la gestion des indices et des timers
+          initHuntClues();
+          initToggleNSFW();
+          
+        } else {
+          console.error(`❌ Aucune chasse trouvée pour l'ID : ${huntIdParam}`);
+        }
+      } catch (error) {
+        console.error("❌ Erreur lors de la récupération de la chasse :", error);
       }
     }
-    // Lancer l'initialisation de l'utilisateur
-    initUser();
-
-    /** -------------------
-     * Récupération du paramètre d'URL (ex: ?hunt=hunt_001)
-     * ------------------- */
-    function getHuntIdFromURL() {
-      const params = new URLSearchParams(window.location.search);
-      return params.get('hunt');
-    }
-
-    /** -------------------
-     * Chargement des informations de la chasse
-     * ------------------- */
-    const huntId = getHuntIdFromURL();
-    if (huntId) {
-      db.collection("nfc_hunt").doc(huntId).get().then(doc => {
-        if (doc.exists) {
-          const huntData = doc.data();
-          document.getElementById("hunt-title").innerText = huntData.name || "Titre non défini";
-          document.getElementById("hunt-description").innerText = huntData.description || "";
-          document.getElementById("hunt-photo").src = huntData.photo_url || "";
-
-          // Récupération des indices depuis la sous-collection "indices"
-          doc.ref.collection("indices").get().then(snapshot => {
-            let indices = [];
-            snapshot.forEach(indiceDoc => {
-              indices.push(indiceDoc.data());
-            });
-            // Tri des indices (exemple avec un identifiant de type "indice_001", "indice_002", etc.)
-            indices.sort((a, b) => {
-              const numA = parseInt(a.customId.split('_')[1]);
-              const numB = parseInt(b.customId.split('_')[1]);
-              return numA - numB;
-            });
-            const indiceTexts = indices.map(ind => ind.text);
-            setupIndiceButtons(indiceTexts);
-          }).catch(error => console.error("Erreur lors du chargement des indices :", error));
+    
+    function initToggleNSFW() {
+      document.getElementById("toggle-nsfw").addEventListener("click", () => {
+        const photo = document.getElementById("hunt-photo");
+        if (photo.style.display === "none" || photo.style.display === "") {
+          photo.style.display = "block";
+          document.getElementById("toggle-nsfw").innerText = "Cacher NSFW";
+          console.log("NSFW affiché.");
         } else {
-          console.error("Aucune chasse trouvée pour l'ID :", huntId);
+          photo.style.display = "none";
+          document.getElementById("toggle-nsfw").innerText = "Afficher NSFW";
+          console.log("NSFW caché.");
         }
-      }).catch(error => console.error("Erreur lors de la récupération de la chasse :", error));
-    } else {
-      console.error("Aucun paramètre 'hunt' trouvé dans l'URL.");
+      });
     }
-
-    /** -------------------
-     * Fonction pour démarrer un compte à rebours et activer un bouton à l'issue du délai
-     * ------------------- */
-    function startCountdown(duration, timerElement, buttonToEnable) {
-      let timeLeft = duration;
-      timerElement.innerText = "Débloque dans " + timeLeft + "s";
-      const countdownInterval = setInterval(() => {
-        timeLeft--;
-        timerElement.innerText = "Débloque dans " + timeLeft + "s";
-        if (timeLeft <= 0) {
-          clearInterval(countdownInterval);
-          timerElement.innerText = "";
-          buttonToEnable.disabled = false;
+    
+    function initHuntClues() {
+      const indice1Btn = document.getElementById("indice1");
+      const indice2Btn = document.getElementById("indice2");
+      const indice3Btn = document.getElementById("indice3");
+      if (!indicesUnlocked) {
+        indice1Btn.disabled = true;
+        indice2Btn.disabled = true;
+        indice3Btn.disabled = true;
+        document.getElementById("clues-container").insertAdjacentHTML("afterend", "<p id='indice-text'>Les indices sont verrouillés.</p>");
+        console.log("Indices verrouillés, aucun accès sans validation.");
+        return;
+      }
+      indice1Btn.addEventListener("click", () => {
+        indice1Btn.innerText = huntData.indice1 || "Aucun indice 1 défini.";
+        recordHistory({ page: "hunt", event: "Indice 1 affiché", huntId: paramHunt, tagId: huntData.associated_tagid });
+        console.log("Indice 1 affiché par clic, lancement du compte à rebours pour indice 2.");
+        startCountdown(indice2Btn, 60, () => {
+          indice2Btn.disabled = false;
+        });
+      });
+      indice2Btn.addEventListener("click", () => {
+        indice2Btn.innerText = huntData.indice2 || "Aucun indice 2 défini.";
+        recordHistory({ page: "hunt", event: "Indice 2 affiché", huntId: paramHunt, tagId: huntData.associated_tagid });
+        console.log("Indice 2 affiché par clic, lancement du compte à rebours pour indice 3.");
+        startCountdown(indice3Btn, 60, () => {
+          indice3Btn.disabled = false;
+        });
+      });
+      indice3Btn.addEventListener("click", () => {
+        indice3Btn.innerText = huntData.indice3 || "Aucun indice 3 défini.";
+        recordHistory({ page: "hunt", event: "Indice 3 affiché", huntId: paramHunt, tagId: huntData.associated_tagid });
+        console.log("Indice 3 affiché par clic.");
+      });
+    }
+    
+    function startCountdown(button, seconds, callback) {
+      button.disabled = true;
+      let remaining = seconds;
+      button.innerText = `Attendez ${remaining} sec...`;
+      const intervalId = setInterval(() => {
+        remaining--;
+        button.innerText = `Attendez ${remaining} sec...`;
+        if (remaining <= 0) {
+          clearInterval(intervalId);
+          button.innerText = "Cliquez ici";
+          button.disabled = false;
+          if (callback) callback();
+          console.log("Compte à rebours terminé pour un bouton.");
         }
       }, 1000);
     }
-
-    /** -------------------
-     * Configuration des boutons d'indices et logique de déblocage séquentiel
-     * ------------------- */
-    function setupIndiceButtons(indiceTexts) {
-      const btnIndice1 = document.getElementById("indice1");
-      const btnIndice2 = document.getElementById("indice2");
-      const btnIndice3 = document.getElementById("indice3");
-      const timer1 = document.getElementById("timer1");
-      const timer2 = document.getElementById("timer2");
-      const indiceTextDiv = document.getElementById("indice-text");
-
-      btnIndice1.addEventListener("click", function() {
-        indiceTextDiv.innerText = indiceTexts[0] || "Indice 1 non disponible";
-        recordEvent("Indice 1 découvert");
-        btnIndice1.disabled = true;
-        // Lancer un compte à rebours de 10s pour débloquer le bouton Indice 2
-        startCountdown(10, timer1, btnIndice2);
-      });
-
-      btnIndice2.addEventListener("click", function() {
-        indiceTextDiv.innerText += "\n" + (indiceTexts[1] || "Indice 2 non disponible");
-        recordEvent("Indice 2 découvert");
-        btnIndice2.disabled = true;
-        // Démarrer un compte à rebours de 10s pour débloquer le bouton Indice 3
-        startCountdown(10, timer2, btnIndice3);
-      });
-
-      btnIndice3.addEventListener("click", function() {
-        indiceTextDiv.innerText += "\n" + (indiceTexts[2] || "Indice 3 non disponible");
-        recordEvent("Indice 3 découvert");
-        btnIndice3.disabled = true;
-      });
+    
+    if (paramDashboard) {
+      loadPage();
+    } else {
+      signInAnonymously(auth)
+        .then(async () => {
+          await initUser();
+          await loadPage();
+          recordUserActivity();
+        })
+        .catch((error) => {
+          console.error("Erreur lors de l'authentification anonyme :", error);
+        });
     }
-  </script>
+
+
+</script>
 </body>
 </html>

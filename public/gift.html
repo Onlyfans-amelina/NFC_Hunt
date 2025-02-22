@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Gift NFC</title>
+  <style>
+    /* --- Style identique à celui de hunt.html --- */
+    :root {
+      --primary-color: #0099FF;
+      --secondary-color: #0066CC;
+      --background-color: #F5F8FA;
+      --text-color: #333333;
+      --border-color: #D9E6F2;
+    }
+    body {
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background-color: var(--background-color);
+      color: var(--text-color);
+      padding-top: 70px;
+    }
+    #fixed-header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      background: linear-gradient(45deg, #00C6FF, #0072FF);
+      color: #fff;
+      text-align: center;
+      padding: 15px;
+      z-index: 1000;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    }
+    #fixed-header a {
+      color: #fff;
+      text-decoration: none;
+      font-size: 1.5rem;
+      font-weight: bold;
+    }
+    #main-container {
+      max-width: 800px;
+      margin: auto;
+    }
+    .page-container {
+      background: linear-gradient(45deg, #00C6FF, #0072FF);
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      border: 1px solid var(--border-color);
+      text-align: center;
+      color: #ffffff;
+      text-shadow: 1px 1px 3px rgba(0,0,0,0.4);
+      visibility: hidden;
+    }
+    h1 { font-size: 2rem; margin-bottom: 20px; }
+    p { font-size: 1rem; line-height: 1.5; margin-bottom: 20px; }
+    .indice-button {
+      display: block;
+      width: 100%;
+      margin: 10px 0;
+      padding: 10px 20px;
+      background-color: var(--secondary-color);
+      color: #FFFFFF;
+      border: 2px solid #FFFFFF;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.3s ease, border-color 0.3s ease;
+      text-align: center;
+      box-sizing: border-box;
+    }
+    .indice-button:disabled { background-color: #cccccc; cursor: not-allowed; }
+    .indice-button:hover:not(:disabled) { background-color: var(--secondary-color); }
+    /* Pop-up d'âge */
+    #age-popup {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0, 118, 255, 0.8);
+      z-index: 2000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #age-popup-content {
+      background: linear-gradient(45deg, #00C6FF, #0072FF);
+      padding: 20px;
+      border-radius: 12px;
+      text-align: center;
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+    #age-popup-content button {
+      margin: 5px;
+      padding: 10px 20px;
+      background: #0066CC;
+      border: none;
+      border-radius: 4px;
+      color: #fff;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    #age-popup-content button:hover { background: #0050a0; }
+  </style>
+</head>
+<body>
+  <div id="fixed-header">
+    <a href="https://onlyfans-amelina.com" target="_blank">Mon OnlyFans à 50%</a>
+  </div>
+  
+  <div id="main-container">
+    <div id="page-content"></div>
+  </div>
+  
+  <!-- Pop-up de vérification d'âge -->
+  <div id="age-popup">
+    <div id="age-popup-content">
+      <p>Êtes-vous majeur (18 ans et plus) ?</p>
+      <button id="age-yes">Oui, j'ai 18 ans</button>
+      <button id="age-no">Non</button>
+    </div>
+  </div>
+  
+  <!-- Boutons de navigation -->
+  <div style="text-align:center; margin-top:20px;">
+    <button class="indice-button" onclick="window.location.href='hunt_list.html'">Liste des chasses</button>
+    <button class="indice-button" onclick="window.location.href='index.html?hunt=chasse_du_tresor'">Aller à une chasse</button>
+  </div>
+  
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+    import { enableIndexedDbPersistence, getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+    import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+    
+    const firebaseConfig = {
+      apiKey: "AIzaSyCLQMSzHNiOfXD-umi194rayB3-T0_0ekQ",
+      authDomain: "amelina-a6063.firebaseapp.com",
+      projectId: "amelina-a6063",
+      storageBucket: "amelina-a6063.appspot.com",
+      messagingSenderId: "221285415211",
+      appId: "1:221285415211:web:1db56bcfe7e3305de02d6e"
+    };
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    enableIndexedDbPersistence(db).catch((err) => {
+      if (err.code === 'failed-precondition') {
+        console.warn("La persistance ne peut être activée : plusieurs onglets ouverts.");
+      } else if (err.code === 'unimplemented') {
+        console.warn("La persistance hors ligne n'est pas supportée par ce navigateur.");
+      }
+    });
+    const auth = getAuth(app);
+    console.log("✅ Firebase connecté et Firestore prêt !");
+    
+    let firestoreRequestCount = 0;
+    function safeGetDoc(ref) {
+      firestoreRequestCount++;
+      return getDoc(ref).then(result => {
+        console.log(`[Firestore] getDoc #${firestoreRequestCount}`);
+        return result;
+      });
+    }
+    
+    function sanitizeText(text) {
+      const div = document.createElement("div");
+      div.innerText = text;
+      return div.innerText;
+    }
+    
+    async function loadGiftPage(giftId) {
+      console.log(`🔄 Chargement du gift (${giftId})...`);
+      const giftDocRef = doc(db, "gift", giftId);
+      try {
+        const giftSnap = await safeGetDoc(giftDocRef);
+        if (giftSnap.exists()) {
+          const giftData = giftSnap.data();
+          const container = document.getElementById("page-content");
+          container.innerHTML = `
+            <div class="page-container" id="gift-page">
+              <h1>${sanitizeText(giftData.titre || "Titre non défini")}</h1>
+              <p>${sanitizeText(giftData.description || "")}</p>
+              <button id="reveal-gift-photo" class="indice-button">Révéler la photo</button>
+              <div id="gift-photo-container" style="display:none;">
+                <img src="${giftData.photo_url}" alt="Photo du gift" style="width:100%; border:1px solid var(--border-color); border-radius:4px;"/>
+              </div>
+              <button onclick="window.location.href='hunt_list.html'" class="indice-button">Liste des chasses</button>
+            </div>
+          `;
+          document.getElementById("reveal-gift-photo").addEventListener("click", () => {
+            document.getElementById("gift-photo-container").style.display = "block";
+          });
+          document.getElementById("gift-page").style.visibility = "visible";
+        } else {
+          document.getElementById("page-content").innerHTML = `<p>Aucun gift trouvé pour l'ID : ${giftId}</p>`;
+        }
+      } catch (error) {
+        console.error("❌ Erreur lors de la récupération du gift :", error);
+      }
+    }
+    
+    // Pop-up d'âge
+    function checkAgeVerification() {
+      if (!document.cookie.split('; ').find(row => row.startsWith("ageVerified="))) {
+        document.getElementById("age-popup").style.display = "flex";
+      }
+    }
+    document.getElementById("age-yes").addEventListener("click", () => {
+      document.cookie = "ageVerified=true; path=/; max-age=" + 60*60*24*365;
+      document.getElementById("age-popup").style.display = "none";
+    });
+    document.getElementById("age-no").addEventListener("click", () => {
+      window.location.href = "https://www.google.com";
+    });
+    checkAgeVerification();
+    
+    const urlParams = new URLSearchParams(window.location.search);
+    const giftId = urlParams.get('gift') || "gift123"; // Par défaut gift123 si non fourni
+    
+    signInAnonymously(auth)
+      .then(async () => {
+        await loadGiftPage(giftId);
+      })
+      .catch((error) => {
+        console.error("Erreur lors de l'authentification anonyme :", error);
+      });
+    
+  </script>
+</body>
+</html>

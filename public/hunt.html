@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Chasse NFC</title>
+  <style>
+    /* --- Style commun identique --- */
+    :root {
+      --primary-color: #0099FF;
+      --secondary-color: #0066CC;
+      --background-color: #F5F8FA;
+      --text-color: #333333;
+      --border-color: #D9E6F2;
+    }
+    body {
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background-color: var(--background-color);
+      color: var(--text-color);
+      padding-top: 70px;
+    }
+    #fixed-header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      background: linear-gradient(45deg, #00C6FF, #0072FF);
+      color: #fff;
+      text-align: center;
+      padding: 15px;
+      z-index: 1000;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    }
+    #fixed-header a {
+      color: #fff;
+      text-decoration: none;
+      font-size: 1.5rem;
+      font-weight: bold;
+    }
+    #main-container {
+      max-width: 800px;
+      margin: auto;
+    }
+    .page-container {
+      background: linear-gradient(45deg, #00C6FF, #0072FF);
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      border: 1px solid var(--border-color);
+      text-align: center;
+      color: #ffffff;
+      text-shadow: 1px 1px 3px rgba(0,0,0,0.4);
+      visibility: hidden;
+    }
+    h1 { font-size: 2rem; margin-bottom: 20px; }
+    p { font-size: 1rem; line-height: 1.5; margin-bottom: 20px; }
+    .indice-button {
+      display: block;
+      width: 100%;
+      margin: 10px 0;
+      padding: 10px 20px;
+      background-color: var(--secondary-color);
+      color: #FFFFFF;
+      border: 2px solid #FFFFFF;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.3s ease, border-color 0.3s ease;
+      text-align: center;
+      box-sizing: border-box;
+    }
+    .indice-button:disabled { background-color: #cccccc; cursor: not-allowed; }
+    .indice-button:hover:not(:disabled) { background-color: var(--secondary-color); }
+    #toggle-nsfw {
+      display: block;
+      width: 100%;
+      margin: 10px 0;
+      padding: 10px 20px;
+      background-color: var(--secondary-color);
+      color: #FFFFFF;
+      border: 2px solid #FFFFFF;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.3s ease, border-color 0.3s ease;
+    }
+    #hunt-photo {
+      width: 100%;
+      height: auto;
+      margin-bottom: 20px;
+      display: none;
+      border-radius: 4px;
+      border: 1px solid var(--border-color);
+    }
+    .timer { color: var(--secondary-color); font-size: 0.9rem; margin-bottom: 15px; }
+    #indice-text { white-space: pre-wrap; margin-top: 20px; font-weight: bold; font-size: 1rem; }
+    /* Pop-up d'âge */
+    #age-popup {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0, 118, 255, 0.8);
+      z-index: 2000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #age-popup-content {
+      background: linear-gradient(45deg, #00C6FF, #0072FF);
+      padding: 20px;
+      border-radius: 12px;
+      text-align: center;
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+    #age-popup-content button {
+      margin: 5px;
+      padding: 10px 20px;
+      background: #0066CC;
+      border: none;
+      border-radius: 4px;
+      color: #fff;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    #age-popup-content button:hover { background: #0050a0; }
+  </style>
+</head>
+<body>
+  <!-- Header fixe -->
+  <div id="fixed-header">
+    <a href="https://onlyfans-amelina.com" target="_blank">Mon OnlyFans à 50%</a>
+  </div>
+  
+  <div id="main-container">
+    <div id="page-content"></div>
+  </div>
+  
+  <!-- Pop-up de vérification d'âge -->
+  <div id="age-popup">
+    <div id="age-popup-content">
+      <p>Êtes-vous majeur (18 ans et plus) ?</p>
+      <button id="age-yes">Oui, j'ai 18 ans</button>
+      <button id="age-no">Non</button>
+    </div>
+  </div>
+  
+  <!-- Bouton de navigation vers la liste des chasses -->
+  <div style="text-align:center; margin-top:20px;">
+    <button class="indice-button" onclick="window.location.href='hunt_list.html'">Liste des chasses</button>
+  </div>
+  
+  <script type="module">
+    /*********************** IMPORTS & INITIALISATION FIREBASE ***********************/
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+    import { enableIndexedDbPersistence, getFirestore, doc, getDoc, updateDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+    import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+    
+    const firebaseConfig = {
+      apiKey: "AIzaSyCLQMSzHNiOfXD-umi194rayB3-T0_0ekQ",
+      authDomain: "amelina-a6063.firebaseapp.com",
+      projectId: "amelina-a6063",
+      storageBucket: "amelina-a6063.appspot.com",
+      messagingSenderId: "221285415211",
+      appId: "1:221285415211:web:1db56bcfe7e3305de02d6e"
+    };
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    enableIndexedDbPersistence(db).catch((err) => {
+      if (err.code === 'failed-precondition') {
+        console.warn("La persistance ne peut être activée : plusieurs onglets ouverts.");
+      } else if (err.code === 'unimplemented') {
+        console.warn("La persistance hors ligne n'est pas supportée par ce navigateur.");
+      }
+    });
+    const auth = getAuth(app);
+    console.log("✅ Firebase connecté et Firestore prêt !");
+    
+    /*********************** FONCTIONS UTILITAIRES ***********************/
+    let firestoreRequestCount = 0;
+    function safeGetDoc(ref) {
+      firestoreRequestCount++;
+      return getDoc(ref).then(result => {
+        console.log(`[Firestore] getDoc #${firestoreRequestCount}`);
+        return result;
+      });
+    }
+    function safeUpdateDoc(ref, data) {
+      firestoreRequestCount++;
+      return updateDoc(ref, data).then(result => {
+        console.log(`[Firestore] updateDoc #${firestoreRequestCount}`);
+        return result;
+      });
+    }
+    
+    function sanitizeText(text) {
+      const div = document.createElement("div");
+      div.innerText = text;
+      return div.innerText;
+    }
+    
+    async function recordHistory(eventData) {
+      try {
+        const uid = auth.currentUser.uid;
+        if (huntData.associated_tagid) eventData.tagId = huntData.associated_tagid;
+        const eventWithTimestamp = { ...eventData, timestamp: new Date() };
+        pendingEvents.push(eventWithTimestamp);
+        console.log("✅ Événement enregistré localement :", eventWithTimestamp);
+      } catch (error) {
+        console.error("❌ Erreur lors de l'enregistrement de l'historique :", error);
+      }
+    }
+    
+    let huntData = {};
+    let expectedAnswer = null;
+    let indicesUnlocked = false;
+    let pendingEvents = [];
+    
+    function initToggleNSFW() {
+      document.getElementById("toggle-nsfw").addEventListener("click", () => {
+        const photo = document.getElementById("hunt-photo");
+        if (photo.style.display === "none" || photo.style.display === "") {
+          photo.style.display = "block";
+          document.getElementById("toggle-nsfw").innerText = "Cacher NSFW";
+          console.log("NSFW affiché.");
+        } else {
+          photo.style.display = "none";
+          document.getElementById("toggle-nsfw").innerText = "Afficher NSFW";
+          console.log("NSFW caché.");
+        }
+      });
+    }
+    
+    function initHuntClues() {
+      const indice1Btn = document.getElementById("indice1");
+      const indice2Btn = document.getElementById("indice2");
+      const indice3Btn = document.getElementById("indice3");
+      if (!indicesUnlocked) {
+        indice1Btn.disabled = true;
+        indice2Btn.disabled = true;
+        indice3Btn.disabled = true;
+        document.getElementById("clues-container").insertAdjacentHTML("afterend", "<p id='indice-text'>Les indices sont verrouillés.</p>");
+        console.log("Indices verrouillés, aucun accès sans validation.");
+        return;
+      }
+      indice1Btn.addEventListener("click", () => {
+        indice1Btn.innerText = huntData.indice1 || "Aucun indice 1 défini.";
+        recordHistory({ page: "hunt", event: "Indice 1 affiché", huntId: huntIdParam, tagId: huntData.associated_tagid });
+        console.log("Indice 1 affiché par clic, lancement du compte à rebours pour indice 2.");
+        startCountdown(indice2Btn, 60, () => {
+          indice2Btn.disabled = false;
+        });
+      });
+      indice2Btn.addEventListener("click", () => {
+        indice2Btn.innerText = huntData.indice2 || "Aucun indice 2 défini.";
+        recordHistory({ page: "hunt", event: "Indice 2 affiché", huntId: huntIdParam, tagId: huntData.associated_tagid });
+        console.log("Indice 2 affiché par clic, lancement du compte à rebours pour indice 3.");
+        startCountdown(indice3Btn, 60, () => {
+          indice3Btn.disabled = false;
+        });
+      });
+      indice3Btn.addEventListener("click", () => {
+        indice3Btn.innerText = huntData.indice3 || "Aucun indice 3 défini.";
+        recordHistory({ page: "hunt", event: "Indice 3 affiché", huntId: huntIdParam, tagId: huntData.associated_tagid });
+        console.log("Indice 3 affiché par clic.");
+      });
+    }
+    
+    function startCountdown(button, seconds, callback) {
+      button.disabled = true;
+      let remaining = seconds;
+      button.innerText = `Attendez ${remaining} sec...`;
+      const intervalId = setInterval(() => {
+        remaining--;
+        button.innerText = `Attendez ${remaining} sec...`;
+        if (remaining <= 0) {
+          clearInterval(intervalId);
+          button.innerText = "Cliquez ici";
+          button.disabled = false;
+          if (callback) callback();
+          console.log("Compte à rebours terminé pour un bouton.");
+        }
+      }, 1000);
+    }
+    
+    /*********************** POP-UP VÉRIFICATION D'ÂGE ***********************/
+    function checkAgeVerification() {
+      if (!document.cookie.split('; ').find(row => row.startsWith("ageVerified="))) {
+        document.getElementById("age-popup").style.display = "flex";
+      }
+    }
+    document.getElementById("age-yes").addEventListener("click", () => {
+      document.cookie = "ageVerified=true; path=/; max-age=" + 60*60*24*365;
+      document.getElementById("age-popup").style.display = "none";
+    });
+    document.getElementById("age-no").addEventListener("click", () => {
+      window.location.href = "https://www.google.com";
+    });
+    checkAgeVerification();
+    
+    /*********************** PAGE HUNT ***********************/
+    async function loadHuntPage(huntIdParam) {
+      if (!huntIdParam) {
+        document.getElementById("page-content").innerHTML = "<p>Hunt non spécifié.</p>";
+        return;
+      }
+      console.log(`🔄 Chargement des données de la chasse (${huntIdParam})...`);
+      const huntDocRef = doc(db, "nfc_hunt", huntIdParam);
+      try {
+        const docSnap = await safeGetDoc(huntDocRef);
+        if (docSnap.exists()) {
+          huntData = docSnap.data();
+          expectedAnswer = huntData.expected_answer || "";
+          console.log("✅ expectedAnswer récupérée :", expectedAnswer);
+          // Simuler un délai avant affichage
+          await new Promise(res => setTimeout(res, 1500));
+          const container = document.getElementById("page-content");
+          container.innerHTML = `
+            <div class="page-container" id="hunt-page">
+              <h1 id="hunt-title">${sanitizeText(huntData.name || "Titre non défini")}</h1>
+              <p id="hunt-description">${sanitizeText(huntData.description || "")}</p>
+              <button id="toggle-nsfw" class="indice-button">Afficher NSFW</button>
+              <br>
+              <img id="hunt-photo" src="${huntData.photo_url || ""}" alt="Photo de la chasse" style="display: none;"/>
+              <p id="hunt-description2">${sanitizeText(huntData.description2 || "")}</p>
+              <div id="answer-container" style="margin:20px 0;">
+                <input type="text" id="hunt-answer-input" placeholder="Entrez la réponse" style="width:80%; padding:10px; border:1px solid var(--border-color); border-radius:4px;">
+                <button id="hunt-answer-button" class="indice-button">Valider la réponse</button>
+                <p id="hunt-answer-message" style="color:red;"></p>
+              </div>
+              <div id="clues-container">
+                <button id="indice1" class="indice-button" disabled>Indice 1</button>
+                <button id="indice2" class="indice-button" disabled>Indice 2</button>
+                <button id="indice3" class="indice-button" disabled>Indice 3</button>
+              </div>
+              <button id="employee-access-button" class="indice-button">Accès Employé</button>
+            </div>
+          `;
+          document.getElementById("hunt-page").style.visibility = "visible";
+          
+          // Vérification du paramètre tagid dans l'URL
+          let urlTagId = (new URLSearchParams(window.location.search)).get('tagid'); 
+          if (urlTagId && huntData.associated_tagid) {
+            if (urlTagId.startsWith("tag_")) { urlTagId = urlTagId.substring(4); }
+            let storedTagId = (typeof huntData.associated_tagid === "object" && huntData.associated_tagid.id)
+                              ? huntData.associated_tagid.id 
+                              : huntData.associated_tagid;
+            console.log(`🔍 tagid dans URL : ${urlTagId}`);
+            console.log(`🔍 associated_tagid dans Firestore : ${storedTagId}`);
+            if (urlTagId === storedTagId) {
+              console.log("✅ Tag NFC valide détecté, indice 1 débloqué automatiquement !");
+              indicesUnlocked = true;
+              const indice1Btn = document.getElementById("indice1");
+              indice1Btn.disabled = false;
+              indice1Btn.innerText = huntData.indice1 || "Aucun indice 1 défini.";
+              recordHistory({ page: "hunt", event: "Indice 1 affiché (auto via tag)", huntId: huntIdParam, tagId: storedTagId });
+            } else {
+              console.log("❌ Le tagid dans l'URL ne correspond pas à celui enregistré.");
+            }
+          }
+          
+          // Vérification du paramètre tag_ref dans l'URL
+          const tagRefParam = (new URLSearchParams(window.location.search)).get('tag_ref');
+          if (tagRefParam) {
+            console.log("Paramètre tag_ref trouvé dans l'URL :", tagRefParam);
+            let processedTagRef = tagRefParam;
+            if (processedTagRef.startsWith("tag_")) { processedTagRef = processedTagRef.substring(4); }
+            const tagRefDocRef = doc(db, "nfc_hunt", huntIdParam, "tag_ref", processedTagRef);
+            const tagRefSnap = await safeGetDoc(tagRefDocRef);
+            if (tagRefSnap.exists()) {
+              console.log("✅ Document tag_ref trouvé, déverrouillage automatique de l'indice 1.");
+              indicesUnlocked = true;
+              const indice1Btn = document.getElementById("indice1");
+              indice1Btn.disabled = false;
+              indice1Btn.innerText = huntData.indice1 || "Aucun indice 1 défini.";
+              recordHistory({ page: "hunt", event: "Indice 1 affiché (auto via tag_ref)", huntId: huntIdParam, tagId: processedTagRef });
+            } else {
+              console.log("❌ Aucun document correspondant trouvé pour tag_ref :", processedTagRef);
+            }
+          } else {
+            console.log("Aucun paramètre tag_ref fourni dans l'URL.");
+          }
+          
+          // Gestion de la réponse
+          document.getElementById("hunt-answer-button").addEventListener("click", () => {
+            const answerInput = document.getElementById("hunt-answer-input").value;
+            console.log("Validation de la réponse de l'utilisateur :", answerInput);
+            if(answerInput === expectedAnswer) {
+              console.log("✅ Réponse correcte. Masquage de la zone de réponse et lancement du countdown pour l'indice 1.");
+              document.getElementById("answer-container").style.display = "none";
+              const indice1Btn = document.getElementById("indice1");
+              startCountdown(indice1Btn, 60, () => {
+                indice1Btn.disabled = false;
+              });
+            } else {
+              console.log("❌ Réponse incorrecte.");
+              document.getElementById("hunt-answer-message").innerText = "Réponse incorrecte. Veuillez réessayer.";
+            }
+          });
+          
+          // Bouton Accès Employé
+          const empButton = document.getElementById("employee-access-button");
+          if(empButton) {
+            empButton.addEventListener("click", async () => {
+              const accessCode = prompt("Veuillez entrer le code d'accès pour les employés:");
+              if (!accessCode) return;
+              const employeeDocRef = doc(db, "nfc_hunt", "hunt_001", "page_travailleur", "YDbbVF4QAuNt0VPfrPH6");
+              try {
+                const employeeSnap = await safeGetDoc(employeeDocRef);
+                if (employeeSnap.exists()) {
+                  const employeeData = employeeSnap.data();
+                  if (accessCode === employeeData.code_answers) {
+                    const mainContainer = document.getElementById("main-container");
+                    mainContainer.innerHTML = `
+                      <div class="page-container" id="employee-page">
+                        <h1>${sanitizeText(employeeData.titre || "Titre non défini")}</h1>
+                        <img src="${employeeData.photo_url || ""}" alt="Photo de l'employé" style="width:100%; border:1px solid var(--border-color); border-radius:4px; margin-bottom:20px;"/>
+                        <p>${sanitizeText(employeeData.description || "")}</p>
+                        <a href="mailto:${employeeData.email_contact}" class="indice-button" style="display:inline-block; margin:10px;">Contact</a>
+                        <a href="${employeeData.url_1moisgratuit}" class="indice-button" style="display:inline-block; margin:10px;">1 Mois Gratuit</a>
+                      </div>
+                    `;
+                  } else {
+                    alert("Code d'accès incorrect.");
+                  }
+                } else {
+                  alert("Erreur: données employé introuvables.");
+                }
+              } catch (error) {
+                alert("Erreur lors de la récupération des données.");
+              }
+            });
+          }
+          
+          // Initialisation des indices et du NSFW
+          initHuntClues();
+          initToggleNSFW();
+          
+        } else {
+          document.getElementById("page-content").innerHTML = `<p>Aucune chasse trouvée pour l'ID : ${huntIdParam}</p>`;
+        }
+      } catch (error) {
+        console.error("❌ Erreur lors de la récupération de la chasse :", error);
+      }
+    }
+    
+    // Récupération du paramètre hunt dans l'URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const huntIdParam = urlParams.get('hunt');
+    
+    // Authentification anonyme et chargement de la page hunt
+    signInAnonymously(auth)
+      .then(async () => {
+        await loadHuntPage(huntIdParam);
+      })
+      .catch((error) => {
+        console.error("Erreur lors de l'authentification anonyme :", error);
+      });
+    
+  </script>
+</body>
+</html>

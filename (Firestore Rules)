@@ -1,0 +1,43 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Règles pour la collection "nfc_hunt"
+    match /nfc_hunt/{huntId} {
+      // Tout utilisateur authentifié peut lire une chasse
+      allow read: if request.auth != null;
+      // Seul un administrateur peut écrire (modifier/créer) une chasse
+      allow write: if request.auth != null && request.auth.token.admin == true;
+      
+      // Sous-collection "page_travailleur" (pour la page employé)
+      match /page_travailleur/{docId} {
+        // Seul un administrateur peut lire/écrire ces documents
+        allow read, write: if request.auth != null && request.auth.token.admin == true;
+      }
+    }
+
+    // Règles pour la collection "gift"
+    match /gift/{giftId} {
+      // Lecture autorisée pour tout utilisateur authentifié
+      allow read: if request.auth != null;
+      // Écriture réservée aux administrateurs
+      allow write: if request.auth != null && request.auth.token.admin == true;
+    }
+
+    // Règles pour la collection "hunt_liste"
+    match /hunt_liste/{docId} {
+      // Lecture autorisée pour tout utilisateur authentifié
+      allow read: if request.auth != null;
+      // Écriture réservée aux administrateurs
+      allow write: if request.auth != null && request.auth.token.admin == true;
+    }
+
+    // Règles pour la collection "users"
+    match /users/{userId} {
+      // Un utilisateur authentifié peut créer son document
+      allow create: if request.auth != null;
+      // Un utilisateur peut lire, mettre à jour ou supprimer son propre document
+      allow read, update, delete: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}
