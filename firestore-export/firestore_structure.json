@@ -1,0 +1,105 @@
+{
+  "Lieux": {
+    "Sherbrooke": {
+      "Gifts": {
+        "Mont_Bellevue": {},
+        "Structure_Metalique_Rivière_Magog": {}
+      },
+      "Restaurants": {
+        "Boston_pizza": {},
+        "La_Cage": {}
+      }
+    }
+  },
+  "Photo": {
+    "Photo1": {},
+    "Photo2": {},
+    "Photo3": {},
+    "photo 1": {},
+    "photo 2": {},
+    "photo 3": {}
+  },
+  "Restaurants": {
+    "Sherbrooke": {
+      "Restaurants": {
+        "Boston_Pizza": {}
+      }
+    }
+  },
+  "nfc_gift": {
+    "trrqXaokZiaqpTqQmGsi": {}
+  },
+  "nfc_hunt": {
+    "hunt_001": {
+      "clues": {
+        "indice5": {}
+      },
+      "indices": {
+        "indice1": {}
+      },
+      "page_travailleur": {
+        "YDbbVF4QAuNt0VPfrPH6": {}
+      }
+    },
+    "hunt_1": {
+      "indices": {
+        "Indice 1": {},
+        "Indice 2": {},
+        "Indice 3": {}
+      }
+    },
+    "hunt_liste": {}
+  },
+  "photo": {
+    "photo1": {},
+    "photo2": {
+      "indice": {
+        "indice1": {}
+      }
+    },
+    "photo3": {}
+  },
+  "tags": {
+    "AAA_vqsbzyk4CoM3AsLtMN9s": {},
+    "AAB_CZniGTO3Eypg4yaYhDHx": {},
+    "AAC_jSXSnvFH8MjpdQAtvDWp": {},
+    "AAD_iEXNBQFyXG79tI8vmGsq": {},
+    "AAE_5jxRgXoiENcwMqDp1sqm": {},
+    "AAG_IUO4pPNEYO8FldnkBbHf": {},
+    "AAH_krZZtwrGCtwrKgeMLS3e": {},
+    "AAI_VDnXd1rykrYTR2SNLOBc": {},
+    "AAJ_Jn2YkrrOy3Y4mldAgMyV": {},
+    "AAK_3RWpvt5hmzJf5oQAvO2p": {},
+    "AAL_820uAu0VeygunYejwzYG": {},
+    "AAM_OPoXv0gClVzVGgoRb6I7": {},
+    "AAN_lL0MZlL4cKsAjm12ZbRe": {},
+    "AAO_Vt7LL8ecuJfozIj8AffU": {},
+    "AAP_stLisTxFhUMfFH0EmJql": {},
+    "AAQ_5gP9bwBqGqqfzC2DeYUS": {},
+    "AAR_1atJQvYrkXS5cfD6ruyq": {},
+    "AAS_RS61gKj4PcWHuvlm959k": {},
+    "AAT_pNwWnWv6sST8si1Fl4F1": {},
+    "AAU_OAy9FBuLsO8lTudxAxFp": {},
+    "AAV_Md0U0Jfh0BPT7MIQP4aZ": {},
+    "AAW_Gq089pdYRqwBXdR3iNjX": {},
+    "AAX_PGG4UTtd8XZULtnFUBQO": {},
+    "AAY_pTnDjuxN7xCqd7rZhqpT": {},
+    "AAZ_LOBoquz9cuE6LqPlB8sY": {},
+    "ABA_XZSp6KnpzVODlKn1oZLq": {},
+    "ABB_488Nt54N6uNBJzDAU9P4": {},
+    "ABC_z0oE2NokGAozIqXMqSub": {},
+    "ABD_UzCbGNWiViQVWU9NTzF5": {},
+    "ABE_yNQcMvTVHSP3AedGLVyL": {},
+    "ABF_hZxtuNfv3giur21nWRcF": {},
+    "ABG_cDE1XwwLhErLwRqqbcD5": {}
+  },
+  "users": {
+    "EwSyHkO02dgoKtHxPet2WLIqj7C3": {},
+    "LdETF9dtxnDKtq6tW8Rs": {},
+    "PXx7iSNgsvbgm1HRBssg5YEk4RE2": {},
+    "aAdau6qOw2ZeuIZwKCZobDrI6xt1": {},
+    "fJZq7gOtHvozjrDigtex": {},
+    "qLKQuk7uXuToh6hqUcdTXUpsRhZ2": {},
+    "user_001": {}
+  }
+}

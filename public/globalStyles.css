@@ -1,0 +1,241 @@
+/*
+/*L'importer dans tes pages HTML
+Dans le <head> de chacune de tes pages (par exemple, dans index.html, dashboard.html, etc.), ajoute la ligne suivante :
+
+html
+Copier
+Modifier
+<link rel="stylesheet" href="/css/globalStyles.css">
+/*
+/*
+/*
+/*
+/* ===========================
+   Palette de couleurs et variables
+   =========================== */
+   :root {
+    --primary-color: #0099FF;       /* Bleu clair dominant */
+    --secondary-color: #0066CC;     /* Bleu foncé pour les accents */
+    --background-color: #F5F8FA;      /* Fond clair */
+    --text-color: #333333;          /* Texte foncé */
+    --border-color: #D9E6F2;        /* Bordures */
+  }
+  
+  /* ===========================
+     Styles généraux
+     =========================== */
+  body {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    margin: 0;
+    padding: 20px;
+    background-color: var(--background-color);
+    color: var(--text-color);
+    padding-top: 70px; /* Pour laisser de l'espace au bandeau fixe */
+  }
+  
+  h1 {
+    font-size: 2rem;
+    margin-bottom: 20px;
+  }
+  
+  p {
+    font-size: 1rem;
+    line-height: 1.5;
+    margin-bottom: 20px;
+  }
+  
+  /* ===========================
+     Bandeau fixe (Header)
+     =========================== */
+  #fixed-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    background: linear-gradient(45deg, #00C6FF, #0072FF);
+    color: #fff;
+    text-align: center;
+    padding: 15px;
+    z-index: 1000;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  }
+  
+  #fixed-header a {
+    color: #fff;
+    text-decoration: none;
+    font-size: 1.5rem;
+    font-weight: bold;
+  }
+  
+  /* ===========================
+     Conteneur principal
+     =========================== */
+  #main-container {
+    max-width: 800px;
+    margin: auto;
+  }
+  
+  /* ===========================
+     Pages dynamiques (hunt, gift, hunt_liste, dashboard, employee)
+     =========================== */
+  .page-container {
+    background: linear-gradient(45deg, #00C6FF, #0072FF);
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--border-color);
+    text-align: center;
+    color: #ffffff;
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.4);
+    visibility: hidden; /* Masqué jusqu'au chargement final */
+  }
+  
+  /* ===========================
+     Boutons d'indice
+     =========================== */
+  .indice-button {
+    display: block;
+    width: 100%;
+    margin: 10px 0;
+    padding: 10px 20px;
+    background-color: var(--secondary-color);
+    color: #FFFFFF;
+    border: 2px solid #FFFFFF;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+    text-align: center;
+    box-sizing: border-box;
+  }
+  
+  .indice-button:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+  }
+  
+  .indice-button:hover:not(:disabled) {
+    background-color: var(--secondary-color);
+  }
+  
+  /* ===========================
+     Bouton Toggle NSFW
+     =========================== */
+  #toggle-nsfw {
+    display: block;
+    width: 100%;
+    margin: 10px 0;
+    padding: 10px 20px;
+    background-color: var(--secondary-color);
+    color: #FFFFFF;
+    border: 2px solid #FFFFFF;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+  }
+  
+  /* ===========================
+     Photo de chasse (hunt)
+     =========================== */
+  #hunt-photo {
+    width: 100%;
+    height: auto;
+    margin-bottom: 20px;
+    display: none; /* Caché par défaut */
+    border-radius: 4px;
+    border: 1px solid var(--border-color);
+  }
+  
+  /* ===========================
+     Timer
+     =========================== */
+  .timer {
+    color: var(--secondary-color);
+    font-size: 0.9rem;
+    margin-bottom: 15px;
+  }
+  
+  /* ===========================
+     Texte indice
+     =========================== */
+  #indice-text {
+    white-space: pre-wrap;
+    margin-top: 20px;
+    font-weight: bold;
+    font-size: 1rem;
+  }
+  
+  /* ===========================
+     Formulaire de connexion dashboard
+     =========================== */
+  #dashboard-login-container {
+    background: linear-gradient(45deg, #00C6FF, #0072FF);
+    padding: 20px;
+    border-radius: 8px;
+    text-align: center;
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    margin: auto;
+    max-width: 400px;
+    visibility: hidden;
+  }
+  
+  #dashboard-login-container input {
+    width: 80%;
+    padding: 10px;
+    margin: 5px 0;
+    border: none;
+    border-radius: 4px;
+    font-size: 1rem;
+  }
+  
+  #dashboard-login-container button {
+    padding: 10px 20px;
+    background-color: var(--secondary-color);
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-top: 10px;
+  }
+  
+  /* ===========================
+     Pop-up de vérification d'âge
+     =========================== */
+  #age-popup {
+    display: none; /* Masqué par défaut */
+    position: fixed;
+    top: 0; 
+    left: 0;
+    width: 100%; 
+    height: 100%;
+    background: rgba(0, 118, 255, 0.8); /* Fond semi-transparent */
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  #age-popup-content {
+    background: linear-gradient(45deg, #00C6FF, #0072FF);
+    padding: 20px;
+    border-radius: 12px;
+    text-align: center;
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  }
+  
+  #age-popup-content button {
+    margin: 5px;
+    padding: 10px 20px;
+    background: #0066CC;
+    border: none;
+    border-radius: 4px;
+    color: #fff;
+    cursor: pointer;
+    transition: background 0.3s;
+  }
+  
+  #age-popup-content button:hover {
+    background: #0050a0;
+  }
+  
